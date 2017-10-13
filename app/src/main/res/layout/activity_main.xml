@@ -12,27 +12,31 @@
         android:id="@+id/audioCount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="27dp"
+        android:layout_marginTop="265dp"
         android:text="1/x"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:layout_constraintLeft_creator="1"
         tools:layout_constraintRight_creator="1"
-        tools:layout_constraintTop_creator="1" />
+        tools:layout_constraintTop_creator="1"
+        app:layout_constraintHorizontal_bias="0.501" />
 
     <TextView
         android:id="@+id/audioTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="120dp"
-        android:layout_marginTop="48dp"
+        android:layout_marginLeft="86dp"
         android:text="Title"
         android:textSize="18sp"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/audioCount"
         tools:layout_constraintLeft_creator="1"
-        tools:layout_constraintTop_creator="1" />
+        tools:layout_constraintTop_creator="1"
+        android:layout_marginRight="8dp"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@+id/audioCount" />
 
     <Button
         android:id="@+id/back"
@@ -96,18 +100,17 @@
 
     <ImageView
         android:id="@+id/album_cover"
-        android:layout_width="250px"
-        android:layout_height="250px"
-        android:layout_marginBottom="64dp"
+        android:layout_width="500px"
+        android:layout_height="500px"
+        android:layout_marginBottom="301dp"
         android:layout_marginLeft="8dp"
         android:layout_marginRight="8dp"
-        android:layout_marginTop="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintHorizontal_bias="0.502"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/audioTitle"
-        app:layout_constraintVertical_bias="0.221"
-        app:srcCompat="@android:drawable/gallery_thumb" />
+        app:srcCompat="@android:drawable/gallery_thumb"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginTop="8dp"
+        app:layout_constraintVertical_bias="0.0" />
 
 </android.support.constraint.ConstraintLayout>

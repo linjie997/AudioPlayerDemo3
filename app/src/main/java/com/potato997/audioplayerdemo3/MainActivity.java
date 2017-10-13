@@ -57,7 +57,9 @@ public class MainActivity extends AppCompatActivity {
     ImageButton play;
     Button back;
     Button forward;
+    Button rnd;
     String[] dir;
+    boolean isRandom = false;
     View view;
 
     final public static Uri sArtworkUri = Uri
@@ -82,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
         back = (Button) findViewById(R.id.back);
         forward = (Button) findViewById(R.id.forward);
         album_art = (ImageView) findViewById(R.id.album_cover);
+        rnd = (Button) findViewById(R.id.rnd);
 
         setGesture();
 
@@ -153,7 +156,6 @@ public class MainActivity extends AppCompatActivity {
                 play.setImageResource(R.drawable.play);
             }
             else{
-                //changeAudio();
                 music.get(index).getTrack().start();
                 play.setImageResource(R.drawable.pause);
             }
@@ -161,7 +163,6 @@ public class MainActivity extends AppCompatActivity {
                     music.get(index).getAlbumId());
 
             Picasso.with(this).load(uri).into(album_art);
-            titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
         }catch(Exception e){
             Toast.makeText(getApplicationContext(), "PLAY "+e.toString(), Toast.LENGTH_LONG).show();
         }
@@ -171,13 +172,17 @@ public class MainActivity extends AppCompatActivity {
         try{
             music.get(index).getTrack().pause();
             music.get(index).getTrack().seekTo(0);
-            if(index < (music.size()-1)){
-                index++;
-            }else{
-                index = 0;
+            if(isRandom){
+                index = (int)(Math.random()*music.size());
+            }
+            else{
+                if(index < (music.size()-1)){
+                    index++;
+                }else{
+                    index = 0;
+                }
             }
             changeAudio();
-            titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
         }
         catch(Exception e){
             Toast.makeText(getApplicationContext(), "FORWARD "+e.toString(), Toast.LENGTH_LONG).show();
@@ -188,14 +193,19 @@ public class MainActivity extends AppCompatActivity {
         try{
             music.get(index).getTrack().pause();
             music.get(index).getTrack().seekTo(0);
-            if(index > 0){
-                index--;
+            if(isRandom){
+                index = (int)(Math.random()*music.size());
             }
-            else{
-                index = music.size()-1;
+            else
+            {
+                if(index > 0){
+                    index--;
+                }
+                else{
+                    index = music.size()-1;
+                }
             }
             changeAudio();
-            titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
         }
         catch(Exception e){
             Toast.makeText(getApplicationContext(), "BACK "+e.toString(), Toast.LENGTH_LONG).show();
@@ -210,16 +220,20 @@ public class MainActivity extends AppCompatActivity {
             Picasso.with(this).load(uri).into(album_art);
             play.setImageResource(R.drawable.pause);
             txtCount.setText("\n" + (index+1) + "/" + music.size());
+            titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
         } catch (Exception e) {
             Toast.makeText(getApplicationContext(), "CHANGE "+e.toString(), Toast.LENGTH_LONG).show();
         }
     }
 
     public void random(View v){
-        music.get(index).getTrack().pause();
-        music.get(index).getTrack().seekTo(0);
-        index = (int)(Math.random()*music.size());
-        titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
-        changeAudio();
+        if(isRandom){
+            isRandom = false;
+            rnd.setText("false");
+        }
+        else{
+            isRandom = true;
+            rnd.setText("true");
+        }
     }
 }
