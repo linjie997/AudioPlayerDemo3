@@ -5,12 +5,14 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.media.Image;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -19,6 +21,7 @@ import android.os.ParcelFileDescriptor;
 import android.provider.BaseColumns;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -26,6 +29,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -50,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     TextView txtCount;
     TextView titletxt;
     int index;
-    Button play;
+    ImageButton play;
     Button back;
     Button forward;
     String[] dir;
@@ -65,17 +69,16 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE)){
-                Toast.makeText(getApplicationContext(), "Permission must me granted to read the music!", Toast.LENGTH_LONG).show();
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE }, 0);
             }
-            ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},1);
         }
 
         view = findViewById(android.R.id.content);
         index = 0;
         txtCount = (TextView) findViewById(R.id.audioCount);
         titletxt = (TextView) findViewById(R.id.audioTitle);
-        play = (Button) findViewById(R.id.play);
+        play = (ImageButton) findViewById(R.id.play);
         back = (Button) findViewById(R.id.back);
         forward = (Button) findViewById(R.id.forward);
         album_art = (ImageView) findViewById(R.id.album_cover);
@@ -147,12 +150,12 @@ public class MainActivity extends AppCompatActivity {
         try{
             if(music.get(index).getTrack().isPlaying()){
                 music.get(index).getTrack().pause();
-                play.setText("Play");
+                play.setImageResource(R.drawable.play);
             }
             else{
-                changeAudio();
+                //changeAudio();
                 music.get(index).getTrack().start();
-                play.setText("Pause");
+                play.setImageResource(R.drawable.pause);
             }
             Uri uri = ContentUris.withAppendedId(sArtworkUri,
                     music.get(index).getAlbumId());
@@ -202,10 +205,10 @@ public class MainActivity extends AppCompatActivity {
     public void changeAudio(){
         try {
             music.get(index).getTrack().start();
-            play.setText("Pause");
             Uri uri = ContentUris.withAppendedId(sArtworkUri,
                     music.get(index).getAlbumId());
             Picasso.with(this).load(uri).into(album_art);
+            play.setImageResource(R.drawable.pause);
             txtCount.setText("\n" + (index+1) + "/" + music.size());
         } catch (Exception e) {
             Toast.makeText(getApplicationContext(), "CHANGE "+e.toString(), Toast.LENGTH_LONG).show();
