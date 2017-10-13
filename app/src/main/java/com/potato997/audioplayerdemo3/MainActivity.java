@@ -91,14 +91,14 @@ public class MainActivity extends AppCompatActivity {
                 album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
                 albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID));
 
-                if(path.endsWith(".mp3") || path.endsWith(".MP3")){
+                if(path.endsWith(".mp3") || path.endsWith(".MP3") || path.endsWith(".flac") || path.endsWith(".FLAC") || path.endsWith("(.wav")|| path.endsWith(".WAW")
+                        || path.endsWith(".ACC") || path.endsWith(".acc")){
                     dir = path.split("emulated/0");
                     track = MediaPlayer.create(MainActivity.this, Uri.parse(Environment.getExternalStorageDirectory().getPath()+ dir[1]));
                     music.add(new Music(track, artist, title, album, cover, albumId));
 
                     Uri uri = ContentUris.withAppendedId(sArtworkUri,
                             music.get(index).getAlbumId());
-
                     Picasso.with(this).load(uri).into(album_art);
                 }
             }
