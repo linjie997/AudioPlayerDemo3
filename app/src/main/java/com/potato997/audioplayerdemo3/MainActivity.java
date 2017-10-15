@@ -13,17 +13,18 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -47,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     String[] dir;
     boolean isRandom = false;
     View view;
+    SeekBar seekBar;
 
     final public static Uri sArtworkUri = Uri
             .parse("content://media/external/audio/albumart");
@@ -71,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         forward = (Button) findViewById(R.id.forward);
         album_art = (ImageView) findViewById(R.id.album_cover);
         rnd = (Button) findViewById(R.id.rnd);
+        seekBar = (SeekBar) findViewById(R.id.seekBar);
 
         setGesture();
 
@@ -103,12 +106,32 @@ public class MainActivity extends AppCompatActivity {
                         Picasso.with(this).load(uri).into(album_art);
                 }
             }
+            Collections.sort(music, new MyComparator());
             titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
         }
         catch(Exception e){
             Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
         }
         txtCount.setText("\n" + (index+1) + "/" + music.size());
+
+        seekBar.setMax(music.get(index).getTrack().getDuration());
+
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                music.get(index).getTrack().seekTo(progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
     }
 
     public void setGesture(){
