@@ -231,6 +231,7 @@ public class MainActivity extends AppCompatActivity {
                 Picasso.with(this).load(R.drawable.no_art).into(album_art);
             }
 
+            seekBar.setMax(music.get(index).getTrack().getDuration());
             play.setImageResource(R.drawable.pause);
             txtCount.setText("\n" + (index+1) + "/" + music.size());
             titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
