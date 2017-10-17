@@ -4,16 +4,18 @@ import android.Manifest;
 import android.content.ContentUris;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -23,6 +25,7 @@ import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
+import java.io.FileDescriptor;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -96,19 +99,40 @@ public class MainActivity extends AppCompatActivity {
                         || path.endsWith(".ACC") || path.endsWith(".acc")){
                     dir = path.split("emulated/0");
                     track = MediaPlayer.create(MainActivity.this, Uri.parse(Environment.getExternalStorageDirectory().getPath()+ dir[1]));
-                    music.add(new Music(track, artist, title, album, cover, albumId));
-
-                    Uri uri = ContentUris.withAppendedId(sArtworkUri,
-                            music.get(index).getAlbumId());
-                        Picasso.with(this).load(uri).into(album_art);
+                    Bitmap b = getAlbumart(albumId);
+                    music.add(new Music(track, artist, title, album, cover, albumId, b));
                 }
             }
+            album_art.setImageBitmap(music.get(index).getBitmap());
             titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
         }
         catch(Exception e){
             Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
         }
         txtCount.setText("\n" + (index+1) + "/" + music.size());
+    }
+
+    public Bitmap getAlbumart(Long album_id)
+    {
+        Bitmap bm = null;
+        try
+        {
+            final Uri sArtworkUri = Uri
+                    .parse("content://media/external/audio/albumart");
+
+            Uri uri = ContentUris.withAppendedId(sArtworkUri, album_id);
+
+            ParcelFileDescriptor pfd = getBaseContext().getContentResolver()
+                    .openFileDescriptor(uri, "r");
+
+            if (pfd != null)
+            {
+                FileDescriptor fd = pfd.getFileDescriptor();
+                bm = BitmapFactory.decodeFileDescriptor(fd);
+            }
+        } catch (Exception e) {
+        }
+        return bm;
     }
 
     public void setGesture(){
@@ -200,10 +224,7 @@ public class MainActivity extends AppCompatActivity {
     public void changeAudio(){
         try {
             music.get(index).getTrack().start();
-            Uri uri = ContentUris.withAppendedId(sArtworkUri,
-                    music.get(index).getAlbumId());
-            Picasso.with(this).load(uri).into(album_art);
-
+            album_art.setImageBitmap(music.get(index).getBitmap());
             if(album_art == null || album_art.getDrawable() == null){
                 Picasso.with(this).load(R.drawable.no_art).into(album_art);
             }
