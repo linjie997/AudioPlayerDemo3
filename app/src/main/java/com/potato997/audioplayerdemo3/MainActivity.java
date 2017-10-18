@@ -125,13 +125,14 @@ public class MainActivity extends AppCompatActivity {
 
         seekBar.setMax(music.get(index).getTrack().getDuration());
 
-        music.get(index).getTrack().start();
-
         final Handler handler = new Handler();
         Runnable task = new Runnable() {
             @Override
             public void run() {
-                currentTime.setText(durationToTime(music.get(index).getTrack().getCurrentPosition()));
+                if(music.get(index).getTrack().isPlaying()){
+                    currentTime.setText(durationToTime(music.get(index).getTrack().getCurrentPosition()));
+                    seekBar.setProgress(music.get(index).getTrack().getCurrentPosition());
+                }
                 handler.postDelayed(this, 1000);
             }
         };
@@ -140,19 +141,17 @@ public class MainActivity extends AppCompatActivity {
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                music.get(index).getTrack().seekTo(progress);
+                if(fromUser)
+                    music.get(index).getTrack().seekTo(progress);
+
                 currentTime.setText(durationToTime(music.get(index).getTrack().getCurrentPosition()));
             }
 
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
+            public void onStartTrackingTouch(SeekBar seekBar) {}
 
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
+            public void onStopTrackingTouch(SeekBar seekBar) {}
         });
     }
 
