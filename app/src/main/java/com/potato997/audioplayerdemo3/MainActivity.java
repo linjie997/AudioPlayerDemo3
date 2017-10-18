@@ -4,29 +4,30 @@ import android.Manifest;
 import android.content.ContentUris;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
-import android.os.ParcelFileDescriptor;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.NetworkPolicy;
 import com.squareup.picasso.Picasso;
 
-import java.io.FileDescriptor;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -42,6 +43,8 @@ public class MainActivity extends AppCompatActivity {
     ImageView album_art;
     TextView txtCount;
     TextView titletxt;
+    TextView currentTime;
+    TextView totTime;
     int index;
     ImageButton play;
     Button back;
@@ -50,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     String[] dir;
     boolean isRandom = false;
     View view;
+    SeekBar seekBar;
 
     final public static Uri sArtworkUri = Uri
             .parse("content://media/external/audio/albumart");
@@ -69,11 +73,14 @@ public class MainActivity extends AppCompatActivity {
         index = 0;
         txtCount = (TextView) findViewById(R.id.audioCount);
         titletxt = (TextView) findViewById(R.id.audioTitle);
+        currentTime = (TextView) findViewById(R.id.currentTime);
+        totTime = (TextView) findViewById(R.id.totTime);
         play = (ImageButton) findViewById(R.id.play);
         back = (Button) findViewById(R.id.back);
         forward = (Button) findViewById(R.id.forward);
         album_art = (ImageView) findViewById(R.id.album_cover);
         rnd = (Button) findViewById(R.id.rnd);
+        seekBar = (SeekBar) findViewById(R.id.seekBar);
 
         setGesture();
 
@@ -99,40 +106,76 @@ public class MainActivity extends AppCompatActivity {
                         || path.endsWith(".ACC") || path.endsWith(".acc")){
                     dir = path.split("emulated/0");
                     track = MediaPlayer.create(MainActivity.this, Uri.parse(Environment.getExternalStorageDirectory().getPath()+ dir[1]));
-                    Bitmap b = getAlbumart(albumId);
-                    music.add(new Music(track, artist, title, album, cover, albumId, b));
+                    music.add(new Music(track, artist, title, album, cover, albumId));
                 }
             }
-            album_art.setImageBitmap(music.get(index).getBitmap());
+
+            Collections.sort(music, new MyComparator());
+
+            changeAlbumArt();
+
             titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
         }
         catch(Exception e){
             Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
         }
         txtCount.setText("\n" + (index+1) + "/" + music.size());
+
+        totTime.setText(durationToTime(music.get(index).getTrack().getDuration()));
+
+        seekBar.setMax(music.get(index).getTrack().getDuration());
+
+        music.get(index).getTrack().start();
+
+        final Handler handler = new Handler();
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                currentTime.setText(durationToTime(music.get(index).getTrack().getCurrentPosition()));
+                handler.postDelayed(this, 1000);
+            }
+        };
+        handler.post(task);
+
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                music.get(index).getTrack().seekTo(progress);
+                currentTime.setText(durationToTime(music.get(index).getTrack().getCurrentPosition()));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
     }
 
-    public Bitmap getAlbumart(Long album_id)
-    {
-        Bitmap bm = null;
-        try
-        {
-            final Uri sArtworkUri = Uri
-                    .parse("content://media/external/audio/albumart");
+    public void changeAlbumArt(){
+        final Uri uri = ContentUris.withAppendedId(sArtworkUri,
+                music.get(index).getAlbumId());
 
-            Uri uri = ContentUris.withAppendedId(sArtworkUri, album_id);
+        Picasso.with(this)
+                .load(uri)
+                .networkPolicy(NetworkPolicy.OFFLINE)
+                .into(album_art, new Callback() {
+                    @Override
+                    public void onSuccess() {
 
-            ParcelFileDescriptor pfd = getBaseContext().getContentResolver()
-                    .openFileDescriptor(uri, "r");
+                    }
 
-            if (pfd != null)
-            {
-                FileDescriptor fd = pfd.getFileDescriptor();
-                bm = BitmapFactory.decodeFileDescriptor(fd);
-            }
-        } catch (Exception e) {
-        }
-        return bm;
+                    @Override
+                    public void onError() {
+                        Picasso.with(getApplicationContext())
+                                .load(uri)
+                                .into(album_art);
+                    }
+                });
     }
 
     public void setGesture(){
@@ -168,10 +211,7 @@ public class MainActivity extends AppCompatActivity {
                 music.get(index).getTrack().start();
                 play.setImageResource(R.drawable.pause);
             }
-            Uri uri = ContentUris.withAppendedId(sArtworkUri,
-                    music.get(index).getAlbumId());
-
-            Picasso.with(this).load(uri).into(album_art);
+            changeAlbumArt();
         }catch(Exception e){
             Toast.makeText(getApplicationContext(), "PLAY "+e.toString(), Toast.LENGTH_LONG).show();
         }
@@ -223,12 +263,11 @@ public class MainActivity extends AppCompatActivity {
 
     public void changeAudio(){
         try {
+            seekBar.setMax(music.get(index).getTrack().getDuration());
+            seekBar.setProgress(0);
+            totTime.setText(durationToTime(music.get(index).getTrack().getDuration()));
             music.get(index).getTrack().start();
-            album_art.setImageBitmap(music.get(index).getBitmap());
-            if(album_art == null || album_art.getDrawable() == null){
-                Picasso.with(this).load(R.drawable.no_art).into(album_art);
-            }
-
+            changeAlbumArt();
             play.setImageResource(R.drawable.pause);
             txtCount.setText("\n" + (index+1) + "/" + music.size());
             titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
@@ -247,5 +286,31 @@ public class MainActivity extends AppCompatActivity {
             isRandom = true;
             rnd.setText("true");
         }
+    }
+
+    public String durationToTime(long milliseconds) {
+        String finalTimerString = "";
+        String secondsString = "";
+
+        // Convert total duration into time
+        int hours = (int) (milliseconds / (1000 * 60 * 60));
+        int minutes = (int) (milliseconds % (1000 * 60 * 60)) / (1000 * 60);
+        int seconds = (int) ((milliseconds % (1000 * 60 * 60)) % (1000 * 60) / 1000);
+        // Add hours if there
+        if (hours > 0) {
+            finalTimerString = hours + ":";
+        }
+
+        // Prepending 0 to seconds if it is one digit
+        if (seconds < 10) {
+            secondsString = "0" + seconds;
+        } else {
+            secondsString = "" + seconds;
+        }
+
+        finalTimerString = finalTimerString + minutes + ":" + secondsString;
+
+        // return timer string
+        return finalTimerString;
     }
 }
