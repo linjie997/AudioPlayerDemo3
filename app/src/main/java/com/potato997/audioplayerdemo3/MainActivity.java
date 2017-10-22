@@ -15,10 +15,14 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.widget.SeekBar;
+import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,6 +32,7 @@ import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -47,8 +52,8 @@ public class MainActivity extends AppCompatActivity {
     TextView totTime;
     int index;
     ImageButton play;
-    Button back;
-    Button forward;
+    ImageButton back;
+    ImageButton forward;
     Button rnd;
     String[] dir;
     boolean isRandom = false;
@@ -61,7 +66,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -69,17 +73,20 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        setContentView(R.layout.activity_main);
+
         view = findViewById(android.R.id.content);
         index = 0;
-        txtCount = (TextView) findViewById(R.id.audioCount);
-        titletxt = (TextView) findViewById(R.id.audioTitle);
         currentTime = (TextView) findViewById(R.id.currentTime);
         totTime = (TextView) findViewById(R.id.totTime);
         play = (ImageButton) findViewById(R.id.play);
-        back = (Button) findViewById(R.id.back);
-        forward = (Button) findViewById(R.id.forward);
+        back = (ImageButton) findViewById(R.id.back);
+        forward = (ImageButton) findViewById(R.id.forward);
+        titletxt = (TextView) findViewById(R.id.title);
+        /*txtCount = (TextView) findViewById(R.id.audioCount);
+
         album_art = (ImageView) findViewById(R.id.album_cover);
-        rnd = (Button) findViewById(R.id.rnd);
+        rnd = (Button) findViewById(R.id.rnd);*/
         seekBar = (SeekBar) findViewById(R.id.seekBar);
 
         setGesture();
@@ -94,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
                     null);
 
             cursor.moveToFirst();
+            ArrayList<HashMap<String, String>> musicList = new ArrayList<HashMap<String, String>>();
 
             while (cursor.moveToNext()) {
                 path = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.DATA));
@@ -107,19 +115,40 @@ public class MainActivity extends AppCompatActivity {
                     dir = path.split("emulated/0");
                     track = MediaPlayer.create(MainActivity.this, Uri.parse(Environment.getExternalStorageDirectory().getPath()+ dir[1]));
                     music.add(new Music(track, artist, title, album, cover, albumId));
+
+
+
+
                 }
             }
 
             Collections.sort(music, new MyComparator());
 
-            changeAlbumArt();
+            for(int i = 0; i < music.size(); i++){
+                HashMap<String, String> mp = new HashMap<String, String>();
+                mp.put("title", music.get(i).getTitle());
+                mp.put("album", music.get(i).getAlbum());
+                musicList.add(mp);
+            }
+            ListAdapter adapter = new SimpleAdapter( MainActivity.this,musicList, R.layout.view_music_list, new String[] { "title","album"},
+                    new int[] {R.id.track_title, R.id.track_album});
+            ListView listView = (ListView) findViewById(R.id.list);
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    music.get(index).getTrack().pause();
+                    music.get(index).getTrack().seekTo(0);
+                    index = position;
+                    changeAudio();
+                }
+            });
+            listView.setAdapter(adapter);
 
             titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
         }
         catch(Exception e){
             Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
         }
-        txtCount.setText("\n" + (index+1) + "/" + music.size());
 
         totTime.setText(durationToTime(music.get(index).getTrack().getDuration()));
 
@@ -210,7 +239,6 @@ public class MainActivity extends AppCompatActivity {
                 music.get(index).getTrack().start();
                 play.setImageResource(R.drawable.pause);
             }
-            changeAlbumArt();
         }catch(Exception e){
             Toast.makeText(getApplicationContext(), "PLAY "+e.toString(), Toast.LENGTH_LONG).show();
         }
@@ -266,9 +294,6 @@ public class MainActivity extends AppCompatActivity {
             seekBar.setProgress(0);
             totTime.setText(durationToTime(music.get(index).getTrack().getDuration()));
             music.get(index).getTrack().start();
-            changeAlbumArt();
-            play.setImageResource(R.drawable.pause);
-            txtCount.setText("\n" + (index+1) + "/" + music.size());
             titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
 
         } catch (Exception e) {
