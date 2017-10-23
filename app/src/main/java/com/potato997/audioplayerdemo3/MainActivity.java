@@ -26,12 +26,9 @@ import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.squareup.picasso.Callback;
-import com.squareup.picasso.NetworkPolicy;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -83,6 +80,26 @@ public class MainActivity extends AppCompatActivity {
         back = (ImageButton) findViewById(R.id.back);
         forward = (ImageButton) findViewById(R.id.forward);
         titletxt = (TextView) findViewById(R.id.title);
+        play.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                play();
+            }
+        });
+
+        back.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                back();
+            }
+        });
+
+        forward.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                forward();
+            }
+        });
         /*txtCount = (TextView) findViewById(R.id.audioCount);
 
         album_art = (ImageView) findViewById(R.id.album_cover);
@@ -91,64 +108,7 @@ public class MainActivity extends AppCompatActivity {
 
         setGesture();
 
-        try{
-
-            Cursor cursor = getContentResolver().query(
-                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                    null,
-                    null,
-                    null,
-                    null);
-
-            cursor.moveToFirst();
-            ArrayList<HashMap<String, String>> musicList = new ArrayList<HashMap<String, String>>();
-
-            while (cursor.moveToNext()) {
-                path = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.DATA));
-                title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
-                artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
-                album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
-                albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID));
-
-                if(path.endsWith(".mp3") || path.endsWith(".MP3") || path.endsWith(".flac") || path.endsWith(".FLAC") || path.endsWith("(.wav")|| path.endsWith(".WAW")
-                        || path.endsWith(".ACC") || path.endsWith(".acc")){
-                    dir = path.split("emulated/0");
-                    track = MediaPlayer.create(MainActivity.this, Uri.parse(Environment.getExternalStorageDirectory().getPath()+ dir[1]));
-                    music.add(new Music(track, artist, title, album, cover, albumId));
-
-
-
-
-                }
-            }
-
-            Collections.sort(music, new MyComparator());
-
-            for(int i = 0; i < music.size(); i++){
-                HashMap<String, String> mp = new HashMap<String, String>();
-                mp.put("title", music.get(i).getTitle());
-                mp.put("album", music.get(i).getAlbum());
-                musicList.add(mp);
-            }
-            ListAdapter adapter = new SimpleAdapter( MainActivity.this,musicList, R.layout.view_music_list, new String[] { "title","album"},
-                    new int[] {R.id.track_title, R.id.track_album});
-            ListView listView = (ListView) findViewById(R.id.list);
-            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    music.get(index).getTrack().pause();
-                    music.get(index).getTrack().seekTo(0);
-                    index = position;
-                    changeAudio();
-                }
-            });
-            listView.setAdapter(adapter);
-
-            titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
-        }
-        catch(Exception e){
-            Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
-        }
+        loadAudio();
 
         totTime.setText(durationToTime(music.get(index).getTrack().getDuration()));
 
@@ -167,6 +127,8 @@ public class MainActivity extends AppCompatActivity {
         };
         handler.post(task);
 
+        MyNotification nPanel = new MyNotification(this);
+
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -184,26 +146,68 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public void loadAudio() {
+        ArrayList<HashMap<String, String>> musicList = null;
+        try {
+
+            Cursor cursor = getContentResolver().query(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    null,
+                    MediaStore.Audio.Media.IS_MUSIC + "!= 0",
+                    null,
+                    MediaStore.Audio.Media.TITLE + " ASC");
+
+            cursor.moveToFirst();
+            musicList = new ArrayList<>();
+
+            while (cursor.moveToNext()) {
+                path = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.DATA));
+                title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
+                artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
+                album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
+                albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID));
+
+                dir = path.split("emulated/0");
+                track = MediaPlayer.create(MainActivity.this, Uri.parse(Environment.getExternalStorageDirectory().getPath() + dir[1]));
+                track.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override public void onCompletion(MediaPlayer mp) { forward(); } });
+
+                music.add(new Music(track, artist, title, album, cover, albumId));
+                HashMap<String, String> mp = new HashMap<String, String>();
+                mp.put("title", title);
+                musicList.add(mp);
+            }
+
+            ListAdapter adapter = new SimpleAdapter(MainActivity.this, musicList, R.layout.view_music_list, new String[]{"title"},
+                    new int[]{R.id.track_title});
+
+            ListView listView = (ListView) findViewById(R.id.list);
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    music.get(index).getTrack().pause();
+                    music.get(index).getTrack().seekTo(0);
+                    index = position;
+                    play.setImageResource(R.drawable.pause);
+                    changeAudio();
+                }
+            });
+            listView.setAdapter(adapter);
+
+            titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
+        } catch (Exception e) {
+            Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
+        }
+    }
+
     public void changeAlbumArt(){
         final Uri uri = ContentUris.withAppendedId(sArtworkUri,
                 music.get(index).getAlbumId());
 
         Picasso.with(this)
                 .load(uri)
-                .networkPolicy(NetworkPolicy.OFFLINE)
-                .into(album_art, new Callback() {
-                    @Override
-                    public void onSuccess() {
-
-                    }
-
-                    @Override
-                    public void onError() {
-                        Picasso.with(getApplicationContext())
-                                .load(uri)
-                                .into(album_art);
-                    }
-                });
+                .error(R.drawable.no_art)
+                .into(album_art);
     }
 
     public void setGesture(){
@@ -212,24 +216,24 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDoubleClick() {
                 super.onDoubleClick();
-                play(view);
+                play();
             }
 
             @Override
             public void onSwipeLeft() {
                 super.onSwipeLeft();
-                back(view);
+                back();
             }
 
             @Override
             public void onSwipeRight() {
                 super.onSwipeLeft();
-                forward(view);
+                forward();
             }
         });
     }
 
-    public void play(View v){
+    public void play(){
         try{
             if(music.get(index).getTrack().isPlaying()){
                 music.get(index).getTrack().pause();
@@ -244,7 +248,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void forward(View v){
+    public void forward(){
         try{
             music.get(index).getTrack().pause();
             music.get(index).getTrack().seekTo(0);
@@ -265,7 +269,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void back(View v){
+    public void back(){
         try{
             music.get(index).getTrack().pause();
             music.get(index).getTrack().seekTo(0);
