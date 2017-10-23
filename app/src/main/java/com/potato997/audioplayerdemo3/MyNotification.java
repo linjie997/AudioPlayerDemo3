@@ -24,7 +24,7 @@ public class MyNotification extends Notification {
         nBuilder = new NotificationCompat.Builder(parent)
                 .setContentTitle("GPlayer")
                 .setSmallIcon(R.drawable.no_art)
-                .setOngoing(true);
+                .setAutoCancel(true);
 
         remoteView = new RemoteViews(parent.getPackageName(), R.layout.notificationlayout);
 

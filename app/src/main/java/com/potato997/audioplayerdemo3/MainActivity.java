@@ -175,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
                 music.add(new Music(track, artist, title, album, cover, albumId));
                 HashMap<String, String> mp = new HashMap<String, String>();
                 mp.put("title", title);
+                mp.put("album_id", Long.toString(albumId));
                 musicList.add(mp);
             }
 
