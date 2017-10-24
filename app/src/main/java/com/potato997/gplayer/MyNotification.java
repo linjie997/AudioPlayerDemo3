@@ -1,4 +1,4 @@
-package com.potato997.audioplayerdemo3;
+package com.potato997.gplayer;
 
 import android.app.Notification;
 import android.app.NotificationManager;

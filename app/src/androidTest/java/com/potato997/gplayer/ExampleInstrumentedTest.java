@@ -1,4 +1,4 @@
-package com.potato997.audioplayerdemo3;
+package com.potato997.gplayer;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

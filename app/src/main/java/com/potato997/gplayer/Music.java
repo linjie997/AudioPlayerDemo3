@@ -1,6 +1,5 @@
-package com.potato997.audioplayerdemo3;
+package com.potato997.gplayer;
 
-import android.graphics.Bitmap;
 import android.media.MediaPlayer;
 
 /**

@@ -1,4 +1,4 @@
-package com.potato997.audioplayerdemo3;
+package com.potato997.gplayer;
 
 import android.Manifest;
 import android.content.ContentUris;
@@ -56,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     boolean isRandom = false;
     View view;
     SeekBar seekBar;
+    MyNotification nPanel;
 
     final public static Uri sArtworkUri = Uri
             .parse("content://media/external/audio/albumart");
@@ -72,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
+        nPanel =  new MyNotification(this);
         view = findViewById(android.R.id.content);
         index = 0;
         currentTime = (TextView) findViewById(R.id.currentTime);
@@ -127,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
         };
         handler.post(task);
 
-        MyNotification nPanel = new MyNotification(this);
+
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
