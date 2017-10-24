@@ -72,8 +72,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         setContentView(R.layout.activity_main);
-
         nPanel =  new MyNotification(this);
+
         view = findViewById(android.R.id.content);
         index = 0;
         currentTime = (TextView) findViewById(R.id.currentTime);
@@ -343,5 +343,12 @@ public class MainActivity extends AppCompatActivity {
 
         // return timer string
         return finalTimerString;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if(!music.get(index).getTrack().isPlaying())
+            nPanel.notificationCancel();
     }
 }

@@ -34,6 +34,8 @@ public class MyNotification extends Notification {
 
         nManager = (NotificationManager) parent.getSystemService(Context.NOTIFICATION_SERVICE);
         nManager.notify(2, nBuilder.build());
+
+
     }
 
     public void setListeners(RemoteViews view){

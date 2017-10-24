@@ -2,30 +2,29 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:background="#00FFFFFF">
+    android:layout_height="wrap_content"
+    android:background="#00FFFFFF"
+    android:orientation="horizontal">
 
     <ImageButton
         android:id="@+id/nBack"
         android:layout_width="wrap_content"
-        android:layout_height="50dp"
+        android:layout_height="match_parent"
         android:layout_weight="1"
-        app:srcCompat="@drawable/back" />
+        android:src="@drawable/back" />
 
     <ImageButton
         android:id="@+id/nPlay"
         android:layout_width="wrap_content"
-        android:layout_height="50dp"
+        android:layout_height="match_parent"
         android:layout_weight="1"
-        app:srcCompat="@drawable/play" />
-
+        android:src="@drawable/play" />
 
     <ImageButton
         android:id="@+id/nForward"
         android:layout_width="wrap_content"
-        android:layout_height="50dp"
+        android:layout_height="match_parent"
         android:layout_weight="1"
-        app:srcCompat="@drawable/forward" />
+        android:src="@drawable/forward" />
 
 </LinearLayout>

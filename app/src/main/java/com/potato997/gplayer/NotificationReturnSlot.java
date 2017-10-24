@@ -1,7 +1,6 @@
 package com.potato997.gplayer;
 
 import android.app.Activity;
-import android.content.Context;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -11,25 +10,24 @@ import android.widget.Toast;
 
 public class NotificationReturnSlot extends Activity {
 
-    Context ctx;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // TODO Auto-generated method stub
         super.onCreate(savedInstanceState);
+
         String action = (String) getIntent().getExtras().get("DO");
-        Toast.makeText(getApplicationContext(), action, Toast.LENGTH_LONG).show();
+
+        Toast.makeText(getApplicationContext(), action, Toast.LENGTH_SHORT).show();
+
         if (action.equals("play")) {
-            ((MainActivity)ctx).play();
+
         } else if (action.equals("back")) {
-            ((MainActivity)ctx).back();
+
         }
         else if (action.equals("forward")) {
-            ((MainActivity)ctx).forward();
+
         }
 
         finish();
     }
-
-
 }
