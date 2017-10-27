@@ -2,8 +2,11 @@ package com.potato997.gplayer;
 
 import android.Manifest;
 import android.content.ContentUris;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -26,6 +29,8 @@ import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
@@ -34,8 +39,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    List<Music> music = new ArrayList<>();
-    MediaPlayer track;
+    static List<Music> music = new ArrayList<>();
     String title;
     String path;
     String artist;
@@ -44,22 +48,28 @@ public class MainActivity extends AppCompatActivity {
     long albumId;
     ImageView album_art;
     TextView txtCount;
-    TextView titletxt;
+    static TextView titletxt;
     TextView currentTime;
-    TextView totTime;
-    int index;
-    ImageButton play;
-    ImageButton back;
-    ImageButton forward;
+    static TextView totTime;
+    static int index;
+    static ImageButton play;
+    static ImageButton back;
+    static ImageButton forward;
     Button rnd;
     String[] dir;
-    boolean isRandom = false;
+    static boolean isRandom = false;
     View view;
-    SeekBar seekBar;
+    static SeekBar seekBar;
     MyNotification nPanel;
+     MediaPlayer currentTrack;
 
     final public static Uri sArtworkUri = Uri
             .parse("content://media/external/audio/albumart");
+
+    SharedPreferences sharedPrefs;
+    SharedPreferences.Editor ed;
+    GsonBuilder gsonb = new GsonBuilder();
+    Gson mGson = gsonb.create();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,11 +81,14 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        sharedPrefs = getSharedPreferences("Save", Context.MODE_PRIVATE);
+        ed = sharedPrefs.edit();
+
+
         setContentView(R.layout.activity_main);
-        nPanel =  new MyNotification(this);
 
         view = findViewById(android.R.id.content);
-        index = 0;
+
         currentTime = (TextView) findViewById(R.id.currentTime);
         totTime = (TextView) findViewById(R.id.totTime);
         play = (ImageButton) findViewById(R.id.play);
@@ -112,32 +125,25 @@ public class MainActivity extends AppCompatActivity {
 
         loadAudio();
 
-        totTime.setText(durationToTime(music.get(index).getTrack().getDuration()));
+        /*if(sharedPrefs.contains("MusicList")){
+            Toast.makeText(getApplicationContext(), "LOCAL", Toast.LENGTH_LONG).show();
+            music = loadLocal();
+        } else {
+            Toast.makeText(getApplicationContext(), "LOAD", Toast.LENGTH_LONG).show();
+            loadAudio();
+        }
+*/
+        //totTime.setText(durationToTime(currentTrack.getDuration()));
 
-        seekBar.setMax(music.get(index).getTrack().getDuration());
-
-        final Handler handler = new Handler();
-        Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                if(music.get(index).getTrack().isPlaying()){
-                    currentTime.setText(durationToTime(music.get(index).getTrack().getCurrentPosition()));
-                    seekBar.setProgress(music.get(index).getTrack().getCurrentPosition());
-                }
-                handler.postDelayed(this, 1000);
-            }
-        };
-        handler.post(task);
-
-
+        //seekBar.setMax(currentTrack.getDuration());
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if(fromUser)
-                    music.get(index).getTrack().seekTo(progress);
+                    currentTrack.seekTo(progress);
 
-                currentTime.setText(durationToTime(music.get(index).getTrack().getCurrentPosition()));
+                currentTime.setText(durationToTime(currentTrack.getCurrentPosition()));
             }
 
             @Override
@@ -146,10 +152,29 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
+
+
+        final Handler handler = new Handler();
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                if(currentTrack.isPlaying()){
+                    currentTime.setText(durationToTime(currentTrack.getCurrentPosition()));
+                    seekBar.setProgress(currentTrack.getCurrentPosition());
+                }
+                handler.postDelayed(this, 1000);
+            }
+        };
+        handler.post(task);
+
+
+
+        nPanel =  new MyNotification(this);
     }
 
     public void loadAudio() {
-        ArrayList<HashMap<String, String>> musicList = null;
+        List<Music> tempMusic = new ArrayList<>();
+        ArrayList<HashMap<String, Object>> musicList = null;
         try {
 
             Cursor cursor = getContentResolver().query(
@@ -170,37 +195,51 @@ public class MainActivity extends AppCompatActivity {
                 albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID));
 
                 dir = path.split("emulated/0");
-                track = MediaPlayer.create(MainActivity.this, Uri.parse(Environment.getExternalStorageDirectory().getPath() + dir[1]));
-                track.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                    @Override public void onCompletion(MediaPlayer mp) { forward(); } });
 
-                music.add(new Music(track, artist, title, album, cover, albumId));
-                HashMap<String, String> mp = new HashMap<String, String>();
+                tempMusic.add(new Music(dir[1], artist, title, album, cover, albumId));
+
+
+                HashMap<String, Object> mp = new HashMap<String, Object>();
                 mp.put("title", title);
-                mp.put("album_id", Long.toString(albumId));
+
+                //mp.put("album_id", Long.toString(albumId));
+
+                final Uri uri = ContentUris.withAppendedId(sArtworkUri,
+                        albumId);
+
+                Bitmap bp = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
+                mp.put("img", bp);
+
                 musicList.add(mp);
             }
 
-            ListAdapter adapter = new SimpleAdapter(MainActivity.this, musicList, R.layout.view_music_list, new String[]{"title"},
-                    new int[]{R.id.track_title});
+            music = tempMusic;
+
+            currentTrack = MediaPlayer.create(this, Uri.parse(Environment.getExternalStorageDirectory().getPath() + music.get(4).getPath()));
+
+            ListAdapter adapter = new SimpleAdapter(this, musicList, R.layout.view_music_list, new String[]{"title", "img"},
+                    new int[]{R.id.track_title, R.id.imageView});
 
             ListView listView = (ListView) findViewById(R.id.list);
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    music.get(index).getTrack().pause();
-                    music.get(index).getTrack().seekTo(0);
+                    currentTrack.pause();
+                    currentTrack.seekTo(0);
                     index = position;
+                    //Toast.makeText(getApplicationContext(), Integer.toString(position), Toast.LENGTH_SHORT).show();
                     play.setImageResource(R.drawable.pause);
                     changeAudio();
                 }
             });
+
             listView.setAdapter(adapter);
 
             titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
         } catch (Exception e) {
-            Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "LOAD AUDIO" + e.toString(), Toast.LENGTH_LONG).show();
         }
+
     }
 
     public void changeAlbumArt(){
@@ -211,6 +250,9 @@ public class MainActivity extends AppCompatActivity {
                 .load(uri)
                 .error(R.drawable.no_art)
                 .into(album_art);
+
+        //URI TO BITPMAP
+        //Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
     }
 
     public void setGesture(){
@@ -237,75 +279,63 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void play(){
-        try{
-            if(music.get(index).getTrack().isPlaying()){
-                music.get(index).getTrack().pause();
-                play.setImageResource(R.drawable.play);
-            }
-            else{
-                music.get(index).getTrack().start();
-                play.setImageResource(R.drawable.pause);
-            }
-        }catch(Exception e){
-            Toast.makeText(getApplicationContext(), "PLAY "+e.toString(), Toast.LENGTH_LONG).show();
+
+        if(currentTrack.isPlaying()){
+            currentTrack.pause();
+            play.setImageResource(R.drawable.play);
+        }
+        else{
+            currentTrack.start();
+            play.setImageResource(R.drawable.pause);
         }
     }
 
-    public void forward(){
-        try{
-            music.get(index).getTrack().pause();
-            music.get(index).getTrack().seekTo(0);
-            if(isRandom){
-                index = (int)(Math.random()*music.size());
-            }
-            else{
-                if(index < (music.size()-1)){
-                    index++;
-                }else{
-                    index = 0;
-                }
-            }
-            changeAudio();
+     public void forward(){
+        currentTrack.pause();
+        currentTrack.seekTo(0);
+        if(isRandom){
+            index = (int)(Math.random()*music.size());
         }
-        catch(Exception e){
-            Toast.makeText(getApplicationContext(), "FORWARD "+e.toString(), Toast.LENGTH_LONG).show();
+        else{
+            if(index < (music.size()-1)){
+                index++;
+            }else{
+                index = 0;
+            }
         }
+        changeAudio();
     }
 
-    public void back(){
-        try{
-            music.get(index).getTrack().pause();
-            music.get(index).getTrack().seekTo(0);
-            if(isRandom){
-                index = (int)(Math.random()*music.size());
-            }
-            else
-            {
-                if(index > 0){
-                    index--;
-                }
-                else{
-                    index = music.size()-1;
-                }
-            }
-            changeAudio();
+     public void back(){
+        currentTrack.pause();
+        currentTrack.seekTo(0);
+        if(isRandom){
+            index = (int)(Math.random()*music.size());
         }
-        catch(Exception e){
-            Toast.makeText(getApplicationContext(), "BACK "+e.toString(), Toast.LENGTH_LONG).show();
+        else
+        {
+            if(index > 0){
+                index--;
+            }
+            else{
+                index = music.size()-1;
+            }
         }
+        changeAudio();
     }
 
     public void changeAudio(){
-        try {
-            seekBar.setMax(music.get(index).getTrack().getDuration());
-            seekBar.setProgress(0);
-            totTime.setText(durationToTime(music.get(index).getTrack().getDuration()));
-            music.get(index).getTrack().start();
-            titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
+        currentTrack = MediaPlayer.create(this ,Uri.parse(Environment.getExternalStorageDirectory().getPath() + music.get(index).getPath()));
 
-        } catch (Exception e) {
-            Toast.makeText(getApplicationContext(), "CHANGE "+e.toString(), Toast.LENGTH_LONG).show();
-        }
+        currentTrack.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override public void onCompletion(MediaPlayer mp) { forward(); } });
+
+        seekBar.setMax(currentTrack.getDuration());
+        seekBar.setProgress(0);
+        totTime.setText(durationToTime(currentTrack.getDuration()));
+        currentTrack.start();
+        titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
+
     }
 
     public void random(View v){
@@ -319,7 +349,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public String durationToTime(long milliseconds) {
+    public static String durationToTime(long milliseconds) {
         String finalTimerString = "";
         String secondsString = "";
 
@@ -346,9 +376,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        if(!music.get(index).getTrack().isPlaying())
+    protected void onDestroy() {
+        if(!currentTrack.isPlaying())
             nPanel.notificationCancel();
+        super.onDestroy();
     }
 }

@@ -1,21 +1,21 @@
 package com.potato997.gplayer;
 
-import android.media.MediaPlayer;
-
 /**
  * Created by Laptop01 on 09/10/2017.
  */
 
 public class Music {
-    private MediaPlayer track;
+    //private MediaPlayer track;
+    private String path;
     private String artist;
     private String title;
     private String album;
     private String cover;
     private long albumId;
 
-    public Music (MediaPlayer track, String artist, String title, String album, String cover, long albumId){
-        this.track = track;
+    public Music (String path , String artist, String title, String album, String cover, long albumId){
+        //this.track = track;
+        this.path = path;
         this.artist = artist;
         this.title = title;
         this.album = album;
@@ -23,9 +23,11 @@ public class Music {
         this.albumId = albumId;
     }
 
-    public MediaPlayer getTrack() {
+    /*public MediaPlayer getTrack() {
         return track;
-    }
+    }*/
+
+    public String getPath(){ return path; }
 
     public String getArtist() {
         return artist;
