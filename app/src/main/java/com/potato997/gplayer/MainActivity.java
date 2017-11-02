@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -25,7 +26,6 @@ import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
-import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -47,7 +47,6 @@ public class MainActivity extends AppCompatActivity {
     String cover;
     long albumId;
     ImageView album_art;
-    TextView txtCount;
     static TextView titletxt;
     TextView currentTime;
     static TextView totTime;
@@ -61,7 +60,10 @@ public class MainActivity extends AppCompatActivity {
     View view;
     static SeekBar seekBar;
     MyNotification nPanel;
-     MediaPlayer currentTrack;
+    MediaPlayer currentTrack;
+    Bitmap defaultImg;
+
+    ListAdapter adapter;
 
     final public static Uri sArtworkUri = Uri
             .parse("content://media/external/audio/albumart");
@@ -73,7 +75,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -81,9 +82,12 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        super.onCreate(savedInstanceState);
+
+        defaultImg = BitmapFactory.decodeResource(getResources(),R.drawable.no_art);
+
         sharedPrefs = getSharedPreferences("Save", Context.MODE_PRIVATE);
         ed = sharedPrefs.edit();
-
 
         setContentView(R.layout.activity_main);
 
@@ -124,18 +128,27 @@ public class MainActivity extends AppCompatActivity {
         setGesture();
 
         loadAudio();
-
-        /*if(sharedPrefs.contains("MusicList")){
+/*
+        if(sharedPrefs.contains("MusicList")){
             Toast.makeText(getApplicationContext(), "LOCAL", Toast.LENGTH_LONG).show();
             music = loadLocal();
+
+            final Handler backgroundLoad = new Handler();
+            Runnable task = new Runnable() {
+                @Override
+                public void run() {
+                    loadAudio();
+                }
+            };
+
         } else {
             Toast.makeText(getApplicationContext(), "LOAD", Toast.LENGTH_LONG).show();
             loadAudio();
         }
 */
-        //totTime.setText(durationToTime(currentTrack.getDuration()));
+        totTime.setText(durationToTime(currentTrack.getDuration()));
 
-        //seekBar.setMax(currentTrack.getDuration());
+        seekBar.setMax(currentTrack.getDuration());
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -167,13 +180,12 @@ public class MainActivity extends AppCompatActivity {
         };
         handler.post(task);
 
-
-
         nPanel =  new MyNotification(this);
     }
 
     public void loadAudio() {
         List<Music> tempMusic = new ArrayList<>();
+
         ArrayList<HashMap<String, Object>> musicList = null;
         try {
 
@@ -185,6 +197,7 @@ public class MainActivity extends AppCompatActivity {
                     MediaStore.Audio.Media.TITLE + " ASC");
 
             cursor.moveToFirst();
+
             musicList = new ArrayList<>();
 
             while (cursor.moveToNext()) {
@@ -198,37 +211,40 @@ public class MainActivity extends AppCompatActivity {
 
                 tempMusic.add(new Music(dir[1], artist, title, album, cover, albumId));
 
+                HashMap<String, Object> mp = new HashMap<>();
 
-                HashMap<String, Object> mp = new HashMap<String, Object>();
-                mp.put("title", title);
-
-                //mp.put("album_id", Long.toString(albumId));
-
-                final Uri uri = ContentUris.withAppendedId(sArtworkUri,
+                Uri uri = ContentUris.withAppendedId(sArtworkUri,
                         albumId);
 
-                Bitmap bp = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
-                mp.put("img", bp);
+                if (Uri.EMPTY.equals(uri)) {
+                    uri = Uri.parse("android.resource://com.potato997.gplayer/" + R.drawable.no_art);
+                    Toast.makeText(this, "EMPTY", Toast.LENGTH_LONG).show();
+                }
+
+                mp.put("title", title);
+
+                mp.put("img", uri);
 
                 musicList.add(mp);
             }
 
             music = tempMusic;
 
-            currentTrack = MediaPlayer.create(this, Uri.parse(Environment.getExternalStorageDirectory().getPath() + music.get(4).getPath()));
+            currentTrack = MediaPlayer.create(this, Uri.parse(Environment.getExternalStorageDirectory().getPath() + music.get(index).getPath()));
 
-            ListAdapter adapter = new SimpleAdapter(this, musicList, R.layout.view_music_list, new String[]{"title", "img"},
-                    new int[]{R.id.track_title, R.id.imageView});
+            adapter = new MyAdapter(this, musicList, R.layout.view_music_list, new String[]{"title", "img"},
+                   new int[]{R.id.track_title, R.id.imageView});
 
             ListView listView = (ListView) findViewById(R.id.list);
+
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     currentTrack.pause();
                     currentTrack.seekTo(0);
                     index = position;
-                    //Toast.makeText(getApplicationContext(), Integer.toString(position), Toast.LENGTH_SHORT).show();
                     play.setImageResource(R.drawable.pause);
+
                     changeAudio();
                 }
             });
@@ -240,8 +256,32 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), "LOAD AUDIO" + e.toString(), Toast.LENGTH_LONG).show();
         }
 
+
+    }
+/*
+    public void save(List<Music> l){
+        Gson gson = new Gson();
+        String json = gson.toJson(l);
+        ed.putString("MusicList", json);
+        ed.commit();
     }
 
+    public List<Music> loadLocal(){
+
+        List <Music> tempList = new ArrayList<Music>();
+
+        Gson gson = new Gson();
+        String json = sharedPrefs.getString("MusicList", "");
+        if (json.isEmpty()) {
+            tempList = new ArrayList<Music>();
+        } else {
+            Type type = new TypeToken<List<Music>>() {
+            }.getType();
+            tempList = gson.fromJson(json, type);
+        }
+        return tempList;
+    }
+*/
     public void changeAlbumArt(){
         final Uri uri = ContentUris.withAppendedId(sArtworkUri,
                 music.get(index).getAlbumId());
@@ -250,9 +290,6 @@ public class MainActivity extends AppCompatActivity {
                 .load(uri)
                 .error(R.drawable.no_art)
                 .into(album_art);
-
-        //URI TO BITPMAP
-        //Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
     }
 
     public void setGesture(){
@@ -376,9 +413,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
+    protected void onStop() {
         if(!currentTrack.isPlaying())
             nPanel.notificationCancel();
-        super.onDestroy();
+        super.onStop();
+    }
+
+    @Override
+    protected  void onResume(){
+        nPanel =  new MyNotification(this);
+        super.onResume();
     }
 }
