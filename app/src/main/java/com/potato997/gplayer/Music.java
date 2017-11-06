@@ -5,7 +5,6 @@ package com.potato997.gplayer;
  */
 
 public class Music {
-    //private MediaPlayer track;
     private String path;
     private String artist;
     private String title;
@@ -14,7 +13,6 @@ public class Music {
     private long albumId;
 
     public Music (String path , String artist, String title, String album, String cover, long albumId){
-        //this.track = track;
         this.path = path;
         this.artist = artist;
         this.title = title;
@@ -22,10 +20,6 @@ public class Music {
         this.cover = cover;
         this.albumId = albumId;
     }
-
-    /*public MediaPlayer getTrack() {
-        return track;
-    }*/
 
     public String getPath(){ return path; }
 
@@ -48,5 +42,6 @@ public class Music {
     public long getAlbumId(){
         return albumId;
     }
+
 
 }

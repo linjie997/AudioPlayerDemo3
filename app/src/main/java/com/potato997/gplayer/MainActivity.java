@@ -2,8 +2,6 @@ package com.potato997.gplayer;
 
 import android.Manifest;
 import android.content.ContentUris;
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -29,13 +27,12 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -68,11 +65,14 @@ public class MainActivity extends AppCompatActivity {
     final public static Uri sArtworkUri = Uri
             .parse("content://media/external/audio/albumart");
 
+    public static int first;
+    public static int last;
+/*
     SharedPreferences sharedPrefs;
     SharedPreferences.Editor ed;
     GsonBuilder gsonb = new GsonBuilder();
     Gson mGson = gsonb.create();
-
+*/
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -86,8 +86,8 @@ public class MainActivity extends AppCompatActivity {
 
         defaultImg = BitmapFactory.decodeResource(getResources(),R.drawable.no_art);
 
-        sharedPrefs = getSharedPreferences("Save", Context.MODE_PRIVATE);
-        ed = sharedPrefs.edit();
+        //sharedPrefs = getSharedPreferences("Save", Context.MODE_PRIVATE);
+        //ed = sharedPrefs.edit();
 
         setContentView(R.layout.activity_main);
 
@@ -235,7 +235,7 @@ public class MainActivity extends AppCompatActivity {
             adapter = new MyAdapter(this, musicList, R.layout.view_music_list, new String[]{"title", "img"},
                    new int[]{R.id.track_title, R.id.imageView});
 
-            ListView listView = (ListView) findViewById(R.id.list);
+            final ListView listView = (ListView) findViewById(R.id.list);
 
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
@@ -244,20 +244,21 @@ public class MainActivity extends AppCompatActivity {
                     currentTrack.seekTo(0);
                     index = position;
                     play.setImageResource(R.drawable.pause);
-
                     changeAudio();
                 }
             });
 
+
             listView.setAdapter(adapter);
 
-            titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
+            titletxt.setText(music.get(index).getTitle());
+
         } catch (Exception e) {
             Toast.makeText(getApplicationContext(), "LOAD AUDIO" + e.toString(), Toast.LENGTH_LONG).show();
         }
-
-
     }
+
+
 /*
     public void save(List<Music> l){
         Gson gson = new Gson();
@@ -371,8 +372,7 @@ public class MainActivity extends AppCompatActivity {
         seekBar.setProgress(0);
         totTime.setText(durationToTime(currentTrack.getDuration()));
         currentTrack.start();
-        titletxt.setText("Titolo: " + music.get(index).getTitle() + "\nArtista: " + music.get(index).getArtist() + "\nAlbum: " + music.get(index).getAlbum());
-
+        titletxt.setText(music.get(index).getTitle());
     }
 
     public void random(View v){

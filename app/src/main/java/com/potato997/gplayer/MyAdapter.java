@@ -22,22 +22,22 @@ public class MyAdapter extends SimpleAdapter {
         super(context, data, resource, from, to);
     }
 
-    public View getView(int position, View convertView, ViewGroup parent){
-        // here you let SimpleAdapter built the view normally.
-        View v = super.getView(position, convertView, parent);
+    public View getView(final int position, View convertView, ViewGroup parent) {
 
-        // Then we get reference for Picasso
+        final View v = super.getView(position, convertView, parent);
+
         ImageView img = (ImageView) v.getTag();
-        if(img == null){
-            img = (ImageView) v.findViewById(R.id.imageView);
-            v.setTag(img); // <<< THIS LINE !!!!
-        }
-        // get the url from the data you passed to the `Map`
-        Uri url = (Uri) ((Map)getItem(position)).get("img");
-        // do Picasso
-        Picasso.with(v.getContext()).load(url).into(img);
 
-        // return the view
+        if (img == null) {
+            img = (ImageView) v.findViewById(R.id.imageView);
+            v.setTag(img);
+        }
+
+        Uri url = (Uri) ((Map) getItem(position)).get("img");
+
+        Picasso.with(v.getContext()).load(url).error(R.drawable.no_art).into(img);
+
         return v;
     }
+
 }

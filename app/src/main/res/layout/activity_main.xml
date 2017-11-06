@@ -5,40 +5,42 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.potato997.gplayer.MainActivity"
-    tools:layout_editor_absoluteY="81dp"
-    tools:layout_editor_absoluteX="0dp">
+    tools:layout_editor_absoluteX="0dp"
+    tools:layout_editor_absoluteY="81dp">
 
     <ListView
         android:id="@+id/list"
-        android:layout_width="368dp"
-        android:layout_height="427dp"
-        android:layout_above="@+id/seekBar"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="175dp"
+        android:layout_marginLeft="8dp"
         android:layout_marginTop="8dp"
+        android:fastScrollEnabled="true"
+        app:layout_constraintBottom_toTopOf="@+id/title"
+        app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:layout_editor_absoluteX="8dp"
-        android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/title" />
+        app:layout_constraintVertical_bias="0.49" />
 
     <SeekBar
         android:id="@+id/seekBar"
         android:layout_width="300dp"
-        android:layout_height="wrap_content"
+        android:layout_height="32dp"
         android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginLeft="8dp"
         android:layout_marginRight="8dp"
         android:layout_marginStart="8dp"
+        android:progress="25"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent" />
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintHorizontal_bias="0.505" />
 
     <ImageButton
         android:id="@+id/play"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginLeft="8dp"
         android:layout_marginRight="8dp"
@@ -47,13 +49,14 @@
         app:layout_constraintBottom_toTopOf="@+id/seekBar"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:srcCompat="@drawable/play" />
+        app:srcCompat="@drawable/play"
+        app:layout_constraintHorizontal_bias="0.501" />
 
     <ImageButton
         android:id="@+id/forward"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:layout_marginLeft="50dp"
         android:layout_marginStart="50dp"
         android:onClick="forward"
@@ -65,7 +68,7 @@
         android:id="@+id/back"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:layout_marginEnd="50dp"
         android:layout_marginRight="50dp"
         android:onClick="back"
@@ -77,13 +80,16 @@
         android:id="@+id/title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginLeft="8dp"
         android:layout_marginRight="8dp"
         android:layout_marginStart="8dp"
         android:text="Title"
+        android:textSize="18sp"
+        android:textStyle="bold"
         app:layout_constraintBottom_toTopOf="@+id/play"
+        app:layout_constraintHorizontal_bias="0.501"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent" />
 
@@ -91,22 +97,22 @@
         android:id="@+id/currentTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="0:00"
         android:layout_marginLeft="16dp"
+        android:layout_marginStart="16dp"
+        android:text="0:00"
         app:layout_constraintLeft_toLeftOf="parent"
-        android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/seekBar"
-        android:layout_marginStart="16dp" />
+        app:layout_constraintBottom_toBottomOf="@+id/seekBar"
+        android:layout_marginBottom="8dp" />
 
     <TextView
         android:id="@+id/totTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="0:00"
+        android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
+        android:text="0:00"
         app:layout_constraintRight_toRightOf="parent"
-        android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/seekBar"
-        android:layout_marginEnd="16dp" />
+        app:layout_constraintBottom_toBottomOf="@+id/seekBar"
+        android:layout_marginBottom="8dp" />
 
 </android.support.constraint.ConstraintLayout>
