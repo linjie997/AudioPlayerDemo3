@@ -4,8 +4,6 @@ import android.Manifest;
 import android.content.ContentUris;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -16,13 +14,12 @@ import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.ListAdapter;
-import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -56,23 +53,23 @@ public class MainActivity extends AppCompatActivity {
     static boolean isRandom = false;
     View view;
     static SeekBar seekBar;
-    MyNotification nPanel;
-    MediaPlayer currentTrack;
-    Bitmap defaultImg;
+    static MediaPlayer currentTrack;
 
-    ListAdapter adapter;
+    //ListAdapter adapter;
 
     final public static Uri sArtworkUri = Uri
             .parse("content://media/external/audio/albumart");
 
-    public static int first;
-    public static int last;
+    private RecyclerView mRecyclerView;
+    private MyRecycleAdapter adapter;
+
 /*
     SharedPreferences sharedPrefs;
     SharedPreferences.Editor ed;
     GsonBuilder gsonb = new GsonBuilder();
     Gson mGson = gsonb.create();
 */
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -84,12 +81,15 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
 
-        defaultImg = BitmapFactory.decodeResource(getResources(),R.drawable.no_art);
 
         //sharedPrefs = getSharedPreferences("Save", Context.MODE_PRIVATE);
         //ed = sharedPrefs.edit();
 
         setContentView(R.layout.activity_main);
+
+
+        mRecyclerView = (RecyclerView) findViewById(R.id.recyclerView);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         view = findViewById(android.R.id.content);
 
@@ -179,8 +179,6 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         handler.post(task);
-
-        nPanel =  new MyNotification(this);
     }
 
     public void loadAudio() {
@@ -209,17 +207,14 @@ public class MainActivity extends AppCompatActivity {
 
                 dir = path.split("emulated/0");
 
-                tempMusic.add(new Music(dir[1], artist, title, album, cover, albumId));
+
 
                 HashMap<String, Object> mp = new HashMap<>();
 
                 Uri uri = ContentUris.withAppendedId(sArtworkUri,
                         albumId);
 
-                if (Uri.EMPTY.equals(uri)) {
-                    uri = Uri.parse("android.resource://com.potato997.gplayer/" + R.drawable.no_art);
-                    Toast.makeText(this, "EMPTY", Toast.LENGTH_LONG).show();
-                }
+                tempMusic.add(new Music(dir[1], artist, title, album, cover, albumId, uri));
 
                 mp.put("title", title);
 
@@ -232,24 +227,9 @@ public class MainActivity extends AppCompatActivity {
 
             currentTrack = MediaPlayer.create(this, Uri.parse(Environment.getExternalStorageDirectory().getPath() + music.get(index).getPath()));
 
-            adapter = new MyAdapter(this, musicList, R.layout.view_music_list, new String[]{"title", "img"},
-                   new int[]{R.id.track_title, R.id.imageView});
+            adapter = new MyRecycleAdapter(this, music);
 
-            final ListView listView = (ListView) findViewById(R.id.list);
-
-            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    currentTrack.pause();
-                    currentTrack.seekTo(0);
-                    index = position;
-                    play.setImageResource(R.drawable.pause);
-                    changeAudio();
-                }
-            });
-
-
-            listView.setAdapter(adapter);
+            mRecyclerView.setAdapter(adapter);
 
             titletxt.setText(music.get(index).getTitle());
 
@@ -373,6 +353,7 @@ public class MainActivity extends AppCompatActivity {
         totTime.setText(durationToTime(currentTrack.getDuration()));
         currentTrack.start();
         titletxt.setText(music.get(index).getTitle());
+        play.setImageResource(R.drawable.pause);
     }
 
     public void random(View v){
@@ -415,13 +396,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         if(!currentTrack.isPlaying())
-            nPanel.notificationCancel();
+
         super.onStop();
     }
 
     @Override
     protected  void onResume(){
-        nPanel =  new MyNotification(this);
+
         super.onResume();
     }
 }

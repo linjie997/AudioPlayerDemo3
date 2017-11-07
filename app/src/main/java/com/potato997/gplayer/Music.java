@@ -1,5 +1,7 @@
 package com.potato997.gplayer;
 
+import android.net.Uri;
+
 /**
  * Created by Laptop01 on 09/10/2017.
  */
@@ -11,14 +13,16 @@ public class Music {
     private String album;
     private String cover;
     private long albumId;
+    private Uri uri;
 
-    public Music (String path , String artist, String title, String album, String cover, long albumId){
+    public Music (String path , String artist, String title, String album, String cover, long albumId, Uri uri){
         this.path = path;
         this.artist = artist;
         this.title = title;
         this.album = album;
         this.cover = cover;
         this.albumId = albumId;
+        this.uri = uri;
     }
 
     public String getPath(){ return path; }
@@ -43,5 +47,5 @@ public class Music {
         return albumId;
     }
 
-
+    public Uri getUri() { return uri; }
 }
