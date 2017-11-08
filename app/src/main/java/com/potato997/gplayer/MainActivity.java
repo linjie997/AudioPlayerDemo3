@@ -1,7 +1,10 @@
 package com.potato997.gplayer;
 
 import android.Manifest;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ContentUris;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.media.MediaPlayer;
@@ -12,6 +15,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -20,6 +24,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.RemoteViews;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -55,13 +60,20 @@ public class MainActivity extends AppCompatActivity {
     static SeekBar seekBar;
     static MediaPlayer currentTrack;
 
-    //ListAdapter adapter;
-
     final public static Uri sArtworkUri = Uri
             .parse("content://media/external/audio/albumart");
 
     private RecyclerView mRecyclerView;
     private MyRecycleAdapter adapter;
+
+    private static final int NOTIFY_ID = 100;
+    private static final String PLAY_ACTION = "com.potato997.gplayer.PLAY_ACTION";
+    private static final String FORWARD_ACTION = "com.potato997.gplayer.FORWARD_ACTION";
+    private static final String BACK_ACTION = "com.potato997.gplayer.BACK_ACTION";
+
+    private NotificationManager notificationManager;
+    private RemoteViews remoteView;
+    private NotificationCompat.Builder nBuilder;
 
 /*
     SharedPreferences sharedPrefs;
@@ -81,12 +93,11 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
 
-
         //sharedPrefs = getSharedPreferences("Save", Context.MODE_PRIVATE);
         //ed = sharedPrefs.edit();
 
         setContentView(R.layout.activity_main);
-
+        startNotification();
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recyclerView);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -128,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
         setGesture();
 
         loadAudio();
+
 /*
         if(sharedPrefs.contains("MusicList")){
             Toast.makeText(getApplicationContext(), "LOCAL", Toast.LENGTH_LONG).show();
@@ -238,7 +250,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
 /*
     public void save(List<Music> l){
         Gson gson = new Gson();
@@ -308,7 +319,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-     public void forward(){
+    public void forward(){
         currentTrack.pause();
         currentTrack.seekTo(0);
         if(isRandom){
@@ -324,7 +335,7 @@ public class MainActivity extends AppCompatActivity {
         changeAudio();
     }
 
-     public void back(){
+    public void back(){
         currentTrack.pause();
         currentTrack.seekTo(0);
         if(isRandom){
@@ -393,16 +404,66 @@ public class MainActivity extends AppCompatActivity {
         return finalTimerString;
     }
 
+    private void startNotification() {
+        nBuilder = new NotificationCompat.Builder(getApplicationContext())
+                .setContentTitle("GPlayer")
+                .setSmallIcon(R.drawable.no_art)
+                .setAutoCancel(true);
+
+        remoteView = new RemoteViews(getPackageName(), R.layout.notificationlayout);
+
+        setListeners(remoteView);
+        nBuilder.setContent(remoteView);
+
+        notificationManager = (NotificationManager) getSystemService(getApplicationContext().NOTIFICATION_SERVICE);
+        notificationManager.notify(2, nBuilder.build());
+    }
+
+    public void setListeners(RemoteViews view){
+
+        Intent play = new Intent(getApplicationContext(), MainActivity.class);
+        play.setAction(PLAY_ACTION);
+        PendingIntent btnPlay = PendingIntent.getActivity(getApplicationContext(), 0, play, 0);
+        view.setOnClickPendingIntent(R.id.nPlay, btnPlay);
+
+        Intent back = new Intent(getApplicationContext(), MainActivity.class);
+        back.setAction(BACK_ACTION);
+        PendingIntent btnBack = PendingIntent.getActivity(getApplicationContext(), 0, back, 0);
+        view.setOnClickPendingIntent(R.id.nBack, btnBack);
+
+        Intent forward = new Intent(getApplicationContext(), MainActivity.class);
+        forward.setAction(FORWARD_ACTION);
+        PendingIntent btnForward = PendingIntent.getActivity(getApplicationContext(), 0, forward, 0);
+        view.setOnClickPendingIntent(R.id.nForward, btnForward);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent)
+    {
+        super.onNewIntent(intent);
+        notiControl(intent);
+    }
+
+    public void notiControl(Intent intent)
+    {
+        if(intent.getAction().equals(PLAY_ACTION)){
+            play();
+        }
+        else if (intent.getAction().equals(BACK_ACTION)){
+            back();
+        }
+        else if (intent.getAction().equals(FORWARD_ACTION)){
+            forward();
+        }
+    }
+
     @Override
     protected void onStop() {
-        if(!currentTrack.isPlaying())
-
-        super.onStop();
+            super.onStop();
     }
 
     @Override
     protected  void onResume(){
-
         super.onResume();
     }
 }
