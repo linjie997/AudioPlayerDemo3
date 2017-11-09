@@ -1,8 +1,6 @@
 package com.potato997.gplayer;
 
 import android.Manifest;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.ContentUris;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -15,7 +13,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -24,7 +21,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.RemoteViews;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -46,34 +42,25 @@ public class MainActivity extends AppCompatActivity {
     String cover;
     long albumId;
     ImageView album_art;
-    static TextView titletxt;
+    TextView titletxt;
     TextView currentTime;
-    static TextView totTime;
+    TextView totTime;
     static int index;
-    static ImageButton play;
-    static ImageButton back;
-    static ImageButton forward;
+    ImageButton play;
+    ImageButton back;
+    ImageButton forward;
     Button rnd;
     String[] dir;
-    static boolean isRandom = false;
-    View view;
-    static SeekBar seekBar;
+    boolean isRandom = false;
+    SeekBar seekBar;
     static MediaPlayer currentTrack;
+    public static BackgroundService backgroundService;
 
-    final public static Uri sArtworkUri = Uri
-            .parse("content://media/external/audio/albumart");
+    final public static Uri sArtworkUri = Uri.parse("content://media/external/audio/albumart");
 
     private RecyclerView mRecyclerView;
     private MyRecycleAdapter adapter;
 
-    private static final int NOTIFY_ID = 100;
-    private static final String PLAY_ACTION = "com.potato997.gplayer.PLAY_ACTION";
-    private static final String FORWARD_ACTION = "com.potato997.gplayer.FORWARD_ACTION";
-    private static final String BACK_ACTION = "com.potato997.gplayer.BACK_ACTION";
-
-    private NotificationManager notificationManager;
-    private RemoteViews remoteView;
-    private NotificationCompat.Builder nBuilder;
 
 /*
     SharedPreferences sharedPrefs;
@@ -97,12 +84,14 @@ public class MainActivity extends AppCompatActivity {
         //ed = sharedPrefs.edit();
 
         setContentView(R.layout.activity_main);
-        startNotification();
+
+        Intent backService = new Intent(this, BackgroundService.class);
+        startService(backService);
+
+        BackgroundService.mainActivity = this;
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recyclerView);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-
-        view = findViewById(android.R.id.content);
 
         currentTime = (TextView) findViewById(R.id.currentTime);
         totTime = (TextView) findViewById(R.id.totTime);
@@ -219,14 +208,12 @@ public class MainActivity extends AppCompatActivity {
 
                 dir = path.split("emulated/0");
 
-
-
                 HashMap<String, Object> mp = new HashMap<>();
 
                 Uri uri = ContentUris.withAppendedId(sArtworkUri,
                         albumId);
 
-                tempMusic.add(new Music(dir[1], artist, title, album, cover, albumId, uri));
+                tempMusic.add(new Music(dir[1], artist, title, album, albumId, uri));
 
                 mp.put("title", title);
 
@@ -285,7 +272,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setGesture(){
-        view.setOnTouchListener(new OnSwipeTouchListener(MainActivity.this) {
+        findViewById(android.R.id.content).setOnTouchListener(new OnSwipeTouchListener(MainActivity.this) {
 
             @Override
             public void onDoubleClick() {
@@ -320,7 +307,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void forward(){
-        currentTrack.pause();
+        if(currentTrack.isPlaying())
+            currentTrack.pause();
+
         currentTrack.seekTo(0);
         if(isRandom){
             index = (int)(Math.random()*music.size());
@@ -365,6 +354,7 @@ public class MainActivity extends AppCompatActivity {
         currentTrack.start();
         titletxt.setText(music.get(index).getTitle());
         play.setImageResource(R.drawable.pause);
+        backgroundService.updateNoti();
     }
 
     public void random(View v){
@@ -402,59 +392,6 @@ public class MainActivity extends AppCompatActivity {
 
         // return timer string
         return finalTimerString;
-    }
-
-    private void startNotification() {
-        nBuilder = new NotificationCompat.Builder(getApplicationContext())
-                .setContentTitle("GPlayer")
-                .setSmallIcon(R.drawable.no_art)
-                .setAutoCancel(true);
-
-        remoteView = new RemoteViews(getPackageName(), R.layout.notificationlayout);
-
-        setListeners(remoteView);
-        nBuilder.setContent(remoteView);
-
-        notificationManager = (NotificationManager) getSystemService(getApplicationContext().NOTIFICATION_SERVICE);
-        notificationManager.notify(2, nBuilder.build());
-    }
-
-    public void setListeners(RemoteViews view){
-
-        Intent play = new Intent(getApplicationContext(), MainActivity.class);
-        play.setAction(PLAY_ACTION);
-        PendingIntent btnPlay = PendingIntent.getActivity(getApplicationContext(), 0, play, 0);
-        view.setOnClickPendingIntent(R.id.nPlay, btnPlay);
-
-        Intent back = new Intent(getApplicationContext(), MainActivity.class);
-        back.setAction(BACK_ACTION);
-        PendingIntent btnBack = PendingIntent.getActivity(getApplicationContext(), 0, back, 0);
-        view.setOnClickPendingIntent(R.id.nBack, btnBack);
-
-        Intent forward = new Intent(getApplicationContext(), MainActivity.class);
-        forward.setAction(FORWARD_ACTION);
-        PendingIntent btnForward = PendingIntent.getActivity(getApplicationContext(), 0, forward, 0);
-        view.setOnClickPendingIntent(R.id.nForward, btnForward);
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent)
-    {
-        super.onNewIntent(intent);
-        notiControl(intent);
-    }
-
-    public void notiControl(Intent intent)
-    {
-        if(intent.getAction().equals(PLAY_ACTION)){
-            play();
-        }
-        else if (intent.getAction().equals(BACK_ACTION)){
-            back();
-        }
-        else if (intent.getAction().equals(FORWARD_ACTION)){
-            forward();
-        }
     }
 
     @Override

@@ -11,16 +11,14 @@ public class Music {
     private String artist;
     private String title;
     private String album;
-    private String cover;
     private long albumId;
     private Uri uri;
 
-    public Music (String path , String artist, String title, String album, String cover, long albumId, Uri uri){
+    public Music (String path , String artist, String title, String album, long albumId, Uri uri){
         this.path = path;
         this.artist = artist;
         this.title = title;
         this.album = album;
-        this.cover = cover;
         this.albumId = albumId;
         this.uri = uri;
     }
@@ -39,9 +37,6 @@ public class Music {
         return album;
     }
 
-    public String getCover(){
-        return cover;
-    }
 
     public long getAlbumId(){
         return albumId;
