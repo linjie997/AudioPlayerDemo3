@@ -1,16 +1,20 @@
 package com.potato997.gplayer;
 
 import android.Manifest;
+import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
+import android.os.IBinder;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -18,15 +22,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.squareup.picasso.Picasso;
-
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,13 +36,12 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     static List<Music> music = new ArrayList<>();
+
+    ArrayList<HashMap<String, Object>> musicList = new ArrayList<>();
     String title;
-    String path;
     String artist;
     String album;
-    String cover;
     long albumId;
-    ImageView album_art;
     TextView titletxt;
     TextView currentTime;
     TextView totTime;
@@ -49,46 +49,32 @@ public class MainActivity extends AppCompatActivity {
     ImageButton play;
     ImageButton back;
     ImageButton forward;
-    Button rnd;
-    String[] dir;
     boolean isRandom = false;
     SeekBar seekBar;
     static MediaPlayer currentTrack;
-    public static BackgroundService backgroundService;
+    public static NotificationService notificationService;
 
     final public static Uri sArtworkUri = Uri.parse("content://media/external/audio/albumart");
 
     private RecyclerView mRecyclerView;
     private MyRecycleAdapter adapter;
 
-
-/*
-    SharedPreferences sharedPrefs;
-    SharedPreferences.Editor ed;
-    GsonBuilder gsonb = new GsonBuilder();
-    Gson mGson = gsonb.create();
-*/
+    private Intent playIntent;
+    private MusicService musicSrv;
+    private boolean musicBound=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        super.onCreate(savedInstanceState);
+
+        setContentView(R.layout.activity_main);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE }, 0);
             }
         }
-
-        super.onCreate(savedInstanceState);
-
-        //sharedPrefs = getSharedPreferences("Save", Context.MODE_PRIVATE);
-        //ed = sharedPrefs.edit();
-
-        setContentView(R.layout.activity_main);
-
-        Intent backService = new Intent(this, BackgroundService.class);
-        startService(backService);
-
-        BackgroundService.mainActivity = this;
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recyclerView);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -99,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
         back = (ImageButton) findViewById(R.id.back);
         forward = (ImageButton) findViewById(R.id.forward);
         titletxt = (TextView) findViewById(R.id.title);
+
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -119,34 +106,36 @@ public class MainActivity extends AppCompatActivity {
                 forward();
             }
         });
-        /*txtCount = (TextView) findViewById(R.id.audioCount);
 
-        album_art = (ImageView) findViewById(R.id.album_cover);
-        rnd = (Button) findViewById(R.id.rnd);*/
         seekBar = (SeekBar) findViewById(R.id.seekBar);
 
         setGesture();
 
         loadAudio();
 
-/*
-        if(sharedPrefs.contains("MusicList")){
-            Toast.makeText(getApplicationContext(), "LOCAL", Toast.LENGTH_LONG).show();
-            music = loadLocal();
+        Uri trackUri = ContentUris.withAppendedId(
+                android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                music.get(0).getId());
 
-            final Handler backgroundLoad = new Handler();
-            Runnable task = new Runnable() {
-                @Override
-                public void run() {
-                    loadAudio();
-                }
-            };
+        currentTrack = new MediaPlayer();
 
-        } else {
-            Toast.makeText(getApplicationContext(), "LOAD", Toast.LENGTH_LONG).show();
-            loadAudio();
+        try {
+            currentTrack.setDataSource(getApplicationContext(), trackUri);
+            currentTrack.prepare();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-*/
+
+
+        adapter = new MyRecycleAdapter(this, music);
+
+        mRecyclerView.setAdapter(adapter);
+
+        Intent backService = new Intent(this, NotificationService.class);
+        startService(backService);
+
+        NotificationService.mainActivity = this;
+
         totTime.setText(durationToTime(currentTrack.getDuration()));
 
         seekBar.setMax(currentTrack.getDuration());
@@ -180,55 +169,49 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         handler.post(task);
+
     }
 
     public void loadAudio() {
-        List<Music> tempMusic = new ArrayList<>();
 
-        ArrayList<HashMap<String, Object>> musicList = null;
         try {
+            ContentResolver musicResolver = getContentResolver();
+            Cursor musicCursor = musicResolver.query(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    null, null, null, MediaStore.Audio.Media.TITLE + " ASC");
 
-            Cursor cursor = getContentResolver().query(
-                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                    null,
-                    MediaStore.Audio.Media.IS_MUSIC + "!= 0",
-                    null,
-                    MediaStore.Audio.Media.TITLE + " ASC");
+            if(musicCursor!=null && musicCursor.moveToFirst()){
+                int titleColumn = musicCursor.getColumnIndex
+                        (android.provider.MediaStore.Audio.Media.TITLE);
+                int idColumn = musicCursor.getColumnIndex
+                        (android.provider.MediaStore.Audio.Media._ID);
+                int artistColumn = musicCursor.getColumnIndex
+                        (android.provider.MediaStore.Audio.Media.ARTIST);
+                int albumColumn = musicCursor.getColumnIndex
+                        (MediaStore.Audio.Media.ALBUM);
+                int albumIdColumn = musicCursor.getColumnIndex
+                        (MediaStore.Audio.Media.ALBUM_ID);
 
-            cursor.moveToFirst();
+                do{
+                    title = musicCursor.getString(titleColumn);
+                    artist = musicCursor.getString(artistColumn);
+                    album = musicCursor.getString(albumColumn);
+                    albumId = musicCursor.getLong(albumIdColumn);
+                    long id = musicCursor.getLong(idColumn);
 
-            musicList = new ArrayList<>();
+                    HashMap<String, Object> mp = new HashMap<>();
 
-            while (cursor.moveToNext()) {
-                path = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.DATA));
-                title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
-                artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
-                album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
-                albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID));
+                    Uri albumUri = ContentUris.withAppendedId(sArtworkUri,
+                            albumId);
 
-                dir = path.split("emulated/0");
+                    music.add(new Music(artist, title, album, albumId, id, albumUri));
 
-                HashMap<String, Object> mp = new HashMap<>();
+                    mp.put("title", title);
 
-                Uri uri = ContentUris.withAppendedId(sArtworkUri,
-                        albumId);
+                    mp.put("img", albumUri);
 
-                tempMusic.add(new Music(dir[1], artist, title, album, albumId, uri));
-
-                mp.put("title", title);
-
-                mp.put("img", uri);
-
-                musicList.add(mp);
+                    musicList.add(mp);
+                } while (musicCursor.moveToNext());
             }
-
-            music = tempMusic;
-
-            currentTrack = MediaPlayer.create(this, Uri.parse(Environment.getExternalStorageDirectory().getPath() + music.get(index).getPath()));
-
-            adapter = new MyRecycleAdapter(this, music);
-
-            mRecyclerView.setAdapter(adapter);
 
             titletxt.setText(music.get(index).getTitle());
 
@@ -237,38 +220,30 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-/*
-    public void save(List<Music> l){
-        Gson gson = new Gson();
-        String json = gson.toJson(l);
-        ed.putString("MusicList", json);
-        ed.commit();
-    }
+    private ServiceConnection musicConnection = new ServiceConnection(){
 
-    public List<Music> loadLocal(){
-
-        List <Music> tempList = new ArrayList<Music>();
-
-        Gson gson = new Gson();
-        String json = sharedPrefs.getString("MusicList", "");
-        if (json.isEmpty()) {
-            tempList = new ArrayList<Music>();
-        } else {
-            Type type = new TypeToken<List<Music>>() {
-            }.getType();
-            tempList = gson.fromJson(json, type);
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            MusicService.MusicBinder binder = (MusicService.MusicBinder)service;
+            musicSrv = binder.getService();
+            musicSrv.setList(music);
+            musicBound = true;
         }
-        return tempList;
-    }
-*/
-    public void changeAlbumArt(){
-        final Uri uri = ContentUris.withAppendedId(sArtworkUri,
-                music.get(index).getAlbumId());
 
-        Picasso.with(this)
-                .load(uri)
-                .error(R.drawable.no_art)
-                .into(album_art);
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            musicBound = false;
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if(playIntent==null){
+            playIntent = new Intent(this, MusicService.class);
+            bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE);
+            startService(playIntent);
+        }
     }
 
     public void setGesture(){
@@ -307,10 +282,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void forward(){
-        if(currentTrack.isPlaying())
-            currentTrack.pause();
-
-        currentTrack.seekTo(0);
+        currentTrack.reset();
         if(isRandom){
             index = (int)(Math.random()*music.size());
         }
@@ -325,8 +297,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void back(){
-        currentTrack.pause();
-        currentTrack.seekTo(0);
+        currentTrack.reset();
         if(isRandom){
             index = (int)(Math.random()*music.size());
         }
@@ -343,7 +314,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void changeAudio(){
-        currentTrack = MediaPlayer.create(this ,Uri.parse(Environment.getExternalStorageDirectory().getPath() + music.get(index).getPath()));
+
+        Uri trackUri = ContentUris.withAppendedId(
+                android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                music.get(index).getId());
+
+        currentTrack = new MediaPlayer();
+
+        try {
+            currentTrack.setDataSource(getApplicationContext(), trackUri);
+            currentTrack.prepare();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         currentTrack.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override public void onCompletion(MediaPlayer mp) { forward(); } });
@@ -354,17 +337,15 @@ public class MainActivity extends AppCompatActivity {
         currentTrack.start();
         titletxt.setText(music.get(index).getTitle());
         play.setImageResource(R.drawable.pause);
-        backgroundService.updateNoti();
+        notificationService.updateNoti();
     }
 
     public void random(View v){
         if(isRandom){
             isRandom = false;
-            rnd.setText("false");
         }
         else{
             isRandom = true;
-            rnd.setText("true");
         }
     }
 
@@ -394,13 +375,4 @@ public class MainActivity extends AppCompatActivity {
         return finalTimerString;
     }
 
-    @Override
-    protected void onStop() {
-            super.onStop();
-    }
-
-    @Override
-    protected  void onResume(){
-        super.onResume();
-    }
 }

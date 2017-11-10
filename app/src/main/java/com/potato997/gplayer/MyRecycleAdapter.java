@@ -39,7 +39,7 @@ public class MyRecycleAdapter extends RecyclerView.Adapter<MyRecycleAdapter.Cust
     public void onBindViewHolder(CustomViewHolder customViewHolder, final int position) {
         Music music = musicList.get(position);
 
-            Picasso.with(mContext).load(music.getUri())
+            Picasso.with(mContext).load(music.getAlbumUri())
                     .error(R.drawable.no_art)
                     .placeholder(R.drawable.no_art)
                     .into(customViewHolder.imageView);
@@ -53,6 +53,7 @@ public class MyRecycleAdapter extends RecyclerView.Adapter<MyRecycleAdapter.Cust
                 mainActivity.forward();
             }
         });
+
     }
 
     @Override

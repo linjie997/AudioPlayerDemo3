@@ -13,7 +13,7 @@ import android.widget.RemoteViews;
 
 import java.io.IOException;
 
-public class BackgroundService extends IntentService {
+public class NotificationService extends IntentService {
 
     public static MainActivity mainActivity;
 
@@ -27,7 +27,7 @@ public class BackgroundService extends IntentService {
     private NotificationCompat.Builder nBuilder;
     Bitmap bm;
 
-    public BackgroundService() {
+    public NotificationService() {
         super("notification-service");
     }
 
@@ -35,49 +35,40 @@ public class BackgroundService extends IntentService {
     public void onCreate() {
         super.onCreate();
 
+        remoteView = new RemoteViews(getPackageName(), R.layout.notification);
+
+        setListeners(remoteView);
+
         nBuilder = new NotificationCompat.Builder(getApplicationContext())
                 .setContentTitle("GPlayer")
-                .setSmallIcon(R.drawable.no_art);
-
-        remoteView = new RemoteViews(getPackageName(), R.layout.notificationlayout);
-
-
-        final Uri uri = ContentUris.withAppendedId(sArtworkUri,
-                MainActivity.music.get(MainActivity.index).getAlbumId());
-
-        try {
-            bm = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
-        } catch (IOException e) {
-        }
-
-        remoteView.setImageViewBitmap(R.id.nAlbumCover, bm);
-        setListeners(remoteView);
-        nBuilder.setContent(remoteView);
+                .setSmallIcon(R.drawable.no_art)
+                .setAutoCancel(false)
+                .setContent(remoteView);
 
         notificationManager = (NotificationManager) getSystemService(getApplicationContext().NOTIFICATION_SERVICE);
         notificationManager.notify(1, nBuilder.build());
 
         updateNoti();
 
-        MainActivity.backgroundService = this;
+        MainActivity.notificationService = this;
     }
 
     private void setListeners(RemoteViews v){
 
-        Intent play = new Intent(this, BackgroundService.class);
+        Intent play = new Intent(this, NotificationService.class);
         play.setAction(PLAY_ACTION);
-        PendingIntent btnPlay = PendingIntent.getService(this, 0, play, 0);
-        v.setOnClickPendingIntent(R.id.nPlay, btnPlay);
+        PendingIntent pendingPlay = PendingIntent.getService(this, 0, play, 0);
+        v.setOnClickPendingIntent(R.id.nPlay, pendingPlay);
 
-        Intent back = new Intent(this, BackgroundService.class);
+        Intent back = new Intent(this, NotificationService.class);
         back.setAction(BACK_ACTION);
-        PendingIntent btnBack = PendingIntent.getService(this, 0, back, 0);
-        v.setOnClickPendingIntent(R.id.nBack, btnBack);
+        PendingIntent pendingBack = PendingIntent.getService(this, 0, back, 0);
+        v.setOnClickPendingIntent(R.id.nBack, pendingBack);
 
-        Intent forward = new Intent(this, BackgroundService.class);
+        Intent forward = new Intent(this, NotificationService.class);
         forward.setAction(FORWARD_ACTION);
-        PendingIntent btnForward = PendingIntent.getService(this, 0, forward, 0);
-        v.setOnClickPendingIntent(R.id.nForward, btnForward);
+        PendingIntent pendingForward = PendingIntent.getService(this, 0, forward, 0);
+        v.setOnClickPendingIntent(R.id.nForward, pendingForward);
     }
 
     @Override
@@ -114,7 +105,8 @@ public class BackgroundService extends IntentService {
             bm = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
         } catch (IOException e) { }
 
-        remoteView.setImageViewBitmap(R.id.nAlbumCover, bm);
+        remoteView.setImageViewBitmap(R.id.nCover, bm);
+        remoteView.setTextViewText(R.id.nTitle, MainActivity.music.get(MainActivity.index).getTitle());
 
         nBuilder.setContent(remoteView);
 

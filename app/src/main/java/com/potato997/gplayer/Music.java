@@ -7,23 +7,21 @@ import android.net.Uri;
  */
 
 public class Music {
-    private String path;
     private String artist;
     private String title;
     private String album;
     private long albumId;
-    private Uri uri;
+    private long id;
+    private Uri albumUri;
 
-    public Music (String path , String artist, String title, String album, long albumId, Uri uri){
-        this.path = path;
+    public Music (String artist, String title, String album, long albumId, long id, Uri albumUri){
         this.artist = artist;
         this.title = title;
         this.album = album;
         this.albumId = albumId;
-        this.uri = uri;
+        this.id = id;
+        this.albumUri = albumUri;
     }
-
-    public String getPath(){ return path; }
 
     public String getArtist() {
         return artist;
@@ -37,10 +35,11 @@ public class Music {
         return album;
     }
 
+    public long getId() { return id; }
 
     public long getAlbumId(){
         return albumId;
     }
 
-    public Uri getUri() { return uri; }
+    public Uri getAlbumUri() { return albumUri; }
 }

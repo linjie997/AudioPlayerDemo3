@@ -1,0 +1,80 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+
+    <ImageView
+        android:id="@+id/nCover"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_marginLeft="8dp"
+        android:layout_weight="1"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:srcCompat="@drawable/no_art"
+        tools:layout_editor_absoluteY="0dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="10dp" />
+
+    <ImageButton
+        android:id="@+id/nBack"
+        android:layout_width="75dp"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="8dp"
+        android:layout_weight="1"
+        android:src="@drawable/back"
+        app:layout_constraintLeft_toRightOf="@+id/nAlbumCover"
+        tools:layout_editor_absoluteY="0dp"
+        android:layout_alignParentTop="true"
+        android:layout_toEndOf="@+id/nCover" />
+
+    <ImageButton
+        android:id="@+id/nPlay"
+        android:layout_width="75dp"
+        android:layout_height="50dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_weight="1"
+        android:src="@drawable/play"
+        app:layout_constraintLeft_toRightOf="@+id/nBack"
+        app:layout_constraintRight_toLeftOf="@+id/nForward"
+        app:srcCompat="@drawable/play"
+        tools:layout_editor_absoluteY="0dp"
+        android:layout_alignParentTop="true"
+        android:layout_toEndOf="@+id/nBack"
+        android:layout_marginStart="15dp" />
+
+    <ImageButton
+        android:id="@+id/nForward"
+        android:layout_width="75dp"
+        android:layout_height="50dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginRight="8dp"
+        android:layout_marginStart="21dp"
+        android:layout_toEndOf="@+id/nPlay"
+        android:layout_weight="1"
+        android:src="@drawable/forward"
+        app:layout_constraintRight_toRightOf="parent"
+        tools:layout_editor_absoluteY="0dp" />
+
+    <TextView
+        android:id="@+id/nTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/nBack"
+        android:layout_marginLeft="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:text="Song title"
+        android:textAlignment="center"
+        android:textColor="@color/colorPrimaryDark"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintLeft_toRightOf="@+id/nAlbumCover"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/nPlay"
+        android:layout_alignStart="@+id/nBack"
+        android:layout_alignEnd="@+id/nForward" />
+</RelativeLayout>
