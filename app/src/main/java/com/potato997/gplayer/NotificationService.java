@@ -15,7 +15,7 @@ import java.io.IOException;
 
 public class NotificationService extends IntentService {
 
-    public static MainActivity mainActivity;
+    public static MusicService musicService;
 
     private static final String PLAY_ACTION = "com.potato997.gplayer.PLAY_ACTION";
     private static final String FORWARD_ACTION = "com.potato997.gplayer.FORWARD_ACTION";
@@ -39,6 +39,8 @@ public class NotificationService extends IntentService {
 
         setListeners(remoteView);
 
+        MusicService.notificationService = this;
+
         nBuilder = new NotificationCompat.Builder(getApplicationContext())
                 .setContentTitle("GPlayer")
                 .setSmallIcon(R.drawable.no_art)
@@ -50,7 +52,6 @@ public class NotificationService extends IntentService {
 
         updateNoti();
 
-        MainActivity.notificationService = this;
     }
 
     private void setListeners(RemoteViews v){
@@ -75,16 +76,16 @@ public class NotificationService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         if(intent.getAction() != null){
             if(intent.getAction().equals(PLAY_ACTION)){
-                try { mainActivity.play();
+                try { musicService.play();
                 }
                 catch (Exception e){}
             }
             else if (intent.getAction().equals(BACK_ACTION)){
-                try { mainActivity.back(); }
+                try { musicService.playPrev(); }
                 catch (Exception e){}
             }
             else if (intent.getAction().equals(FORWARD_ACTION)){
-                try { mainActivity.forward(); }
+                try { musicService.playNext(); }
                 catch (Exception e){}
             }
             updateNoti();
@@ -93,20 +94,20 @@ public class NotificationService extends IntentService {
 
     public void updateNoti(){
 
-        if(MainActivity.currentTrack.isPlaying()){
+        if(musicService.player.isPlaying()){
             remoteView.setImageViewResource(R.id.nPlay, R.drawable.pause);
         } else {
             remoteView.setImageViewResource(R.id.nPlay, R.drawable.play);
         }
 
         final Uri uri = ContentUris.withAppendedId(sArtworkUri,
-                MainActivity.music.get(MainActivity.index).getAlbumId());
+                musicService.music.get(musicService.index).getAlbumId());
         try {
             bm = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
         } catch (IOException e) { }
 
         remoteView.setImageViewBitmap(R.id.nCover, bm);
-        remoteView.setTextViewText(R.id.nTitle, MainActivity.music.get(MainActivity.index).getTitle());
+        remoteView.setTextViewText(R.id.nTitle, musicService.songTitle);
 
         nBuilder.setContent(remoteView);
 

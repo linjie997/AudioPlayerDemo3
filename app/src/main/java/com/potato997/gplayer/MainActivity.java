@@ -13,7 +13,6 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
@@ -21,7 +20,6 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.view.View;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -60,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private MyRecycleAdapter adapter;
 
     private Intent playIntent;
-    private MusicService musicSrv;
+    private MusicService musicService;
     private boolean musicBound=false;
 
     @Override
@@ -85,28 +83,6 @@ public class MainActivity extends AppCompatActivity {
         back = (ImageButton) findViewById(R.id.back);
         forward = (ImageButton) findViewById(R.id.forward);
         titletxt = (TextView) findViewById(R.id.title);
-
-        play.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                play();
-            }
-        });
-
-        back.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                back();
-            }
-        });
-
-        forward.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                forward();
-            }
-        });
-
         seekBar = (SeekBar) findViewById(R.id.seekBar);
 
         setGesture();
@@ -125,18 +101,15 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
+/*
+        currentTrack.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override public void onCompletion(MediaPlayer mp) { forward(); } });
+*/
         adapter = new MyRecycleAdapter(this, music);
 
         mRecyclerView.setAdapter(adapter);
 
-        Intent backService = new Intent(this, NotificationService.class);
-        startService(backService);
-
-        NotificationService.mainActivity = this;
-
-        totTime.setText(durationToTime(currentTrack.getDuration()));
+        MusicService.mainActivity = this;
 
         seekBar.setMax(currentTrack.getDuration());
 
@@ -144,9 +117,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if(fromUser)
-                    currentTrack.seekTo(progress);
-
-                currentTime.setText(durationToTime(currentTrack.getCurrentPosition()));
+                    musicService.seek(progress);
             }
 
             @Override
@@ -155,21 +126,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
-
-
-        final Handler handler = new Handler();
-        Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                if(currentTrack.isPlaying()){
-                    currentTime.setText(durationToTime(currentTrack.getCurrentPosition()));
-                    seekBar.setProgress(currentTrack.getCurrentPosition());
-                }
-                handler.postDelayed(this, 1000);
-            }
-        };
-        handler.post(task);
-
     }
 
     public void loadAudio() {
@@ -225,8 +181,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             MusicService.MusicBinder binder = (MusicService.MusicBinder)service;
-            musicSrv = binder.getService();
-            musicSrv.setList(music);
+            musicService = binder.getService();
+            musicService.getMusic(music);
             musicBound = true;
         }
 
@@ -252,127 +208,20 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDoubleClick() {
                 super.onDoubleClick();
-                play();
+                musicService.play();
             }
 
             @Override
             public void onSwipeLeft() {
                 super.onSwipeLeft();
-                back();
+                musicService.playPrev();
             }
 
             @Override
             public void onSwipeRight() {
                 super.onSwipeLeft();
-                forward();
+                musicService.playNext();
             }
         });
     }
-
-    public void play(){
-
-        if(currentTrack.isPlaying()){
-            currentTrack.pause();
-            play.setImageResource(R.drawable.play);
-        }
-        else{
-            currentTrack.start();
-            play.setImageResource(R.drawable.pause);
-        }
-    }
-
-    public void forward(){
-        currentTrack.reset();
-        if(isRandom){
-            index = (int)(Math.random()*music.size());
-        }
-        else{
-            if(index < (music.size()-1)){
-                index++;
-            }else{
-                index = 0;
-            }
-        }
-        changeAudio();
-    }
-
-    public void back(){
-        currentTrack.reset();
-        if(isRandom){
-            index = (int)(Math.random()*music.size());
-        }
-        else
-        {
-            if(index > 0){
-                index--;
-            }
-            else{
-                index = music.size()-1;
-            }
-        }
-        changeAudio();
-    }
-
-    public void changeAudio(){
-
-        Uri trackUri = ContentUris.withAppendedId(
-                android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                music.get(index).getId());
-
-        currentTrack = new MediaPlayer();
-
-        try {
-            currentTrack.setDataSource(getApplicationContext(), trackUri);
-            currentTrack.prepare();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        currentTrack.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override public void onCompletion(MediaPlayer mp) { forward(); } });
-
-        seekBar.setMax(currentTrack.getDuration());
-        seekBar.setProgress(0);
-        totTime.setText(durationToTime(currentTrack.getDuration()));
-        currentTrack.start();
-        titletxt.setText(music.get(index).getTitle());
-        play.setImageResource(R.drawable.pause);
-        notificationService.updateNoti();
-    }
-
-    public void random(View v){
-        if(isRandom){
-            isRandom = false;
-        }
-        else{
-            isRandom = true;
-        }
-    }
-
-    public static String durationToTime(long milliseconds) {
-        String finalTimerString = "";
-        String secondsString = "";
-
-        // Convert total duration into time
-        int hours = (int) (milliseconds / (1000 * 60 * 60));
-        int minutes = (int) (milliseconds % (1000 * 60 * 60)) / (1000 * 60);
-        int seconds = (int) ((milliseconds % (1000 * 60 * 60)) % (1000 * 60) / 1000);
-        // Add hours if there
-        if (hours > 0) {
-            finalTimerString = hours + ":";
-        }
-
-        // Prepending 0 to seconds if it is one digit
-        if (seconds < 10) {
-            secondsString = "0" + seconds;
-        } else {
-            secondsString = "" + seconds;
-        }
-
-        finalTimerString = finalTimerString + minutes + ":" + secondsString;
-
-        // return timer string
-        return finalTimerString;
-    }
-
 }

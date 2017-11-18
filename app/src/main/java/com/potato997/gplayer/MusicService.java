@@ -1,7 +1,5 @@
 package com.potato997.gplayer;
 
-import android.app.Notification;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ContentUris;
 import android.content.Intent;
@@ -9,9 +7,11 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
+import android.view.View;
 
 import java.util.List;
 import java.util.Random;
@@ -21,26 +21,32 @@ public class MusicService extends Service implements
         MediaPlayer.OnCompletionListener {
 
     //media player
-    private MediaPlayer player;
+    public MediaPlayer player;
     //song list
-    private List<Music> songs;
+    public List<Music> music;
     //current position
-    private int songPosn;
+    public int index;
     //binder
     private final IBinder musicBind = new MusicBinder();
     //title of current song
-    private String songTitle="";
+    public String songTitle="";
     //notification id
     private static final int NOTIFY_ID=1;
     //shuffle flag and random
     private boolean shuffle=false;
     private Random rand;
 
+    public static MainActivity mainActivity;
+    public static NotificationService notificationService;
+    private String currTime;
+
     public void onCreate(){
         //create the service
         super.onCreate();
+        MyRecycleAdapter.musicService = this;
+        notificationService.musicService = this;
         //initialize position
-        songPosn=0;
+        index=0;
         //random
         rand=new Random();
         //create player
@@ -58,11 +64,72 @@ public class MusicService extends Service implements
         player.setOnPreparedListener(this);
         player.setOnCompletionListener(this);
         player.setOnErrorListener(this);
+
+        mainActivity.play.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                play();
+            }
+        });
+
+        mainActivity.forward.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                playNext();
+            }
+        });
+
+        mainActivity.back.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                playPrev();
+            }
+        });
+
+        final Handler handler = new Handler();
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                if(player.isPlaying()){
+                    currTime = durationToTime(player.getCurrentPosition());
+                    mainActivity.currentTime.setText(currTime);
+                    mainActivity.seekBar.setProgress(player.getCurrentPosition());
+                }
+                handler.postDelayed(this, 1000);
+            }
+        };
+        handler.post(task);
     }
 
-    //pass song list
-    public void setList(List<Music> theSongs){
-        songs=theSongs;
+    public void play(){
+
+        if(player.isPlaying()){
+            pausePlayer();
+            mainActivity.play.setImageResource(R.drawable.play);
+        }
+        else{
+            player.start();
+            mainActivity.play.setImageResource(R.drawable.pause);
+        }
+    }
+
+    public void getMusic(List<Music> themusic){
+        music=themusic;
+
+        Music playSong = music.get(index);
+        songTitle=playSong.getTitle();
+        long currSong = playSong.getId();
+
+        Uri trackUri = ContentUris.withAppendedId(
+                android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                currSong);
+        try{
+            player.setDataSource(getApplicationContext(), trackUri);
+            player.prepare();
+        }
+        catch(Exception e){
+            Log.e("MUSIC SERVICE", "Error setting data source", e);
+        }
     }
 
     //binder
@@ -86,42 +153,44 @@ public class MusicService extends Service implements
         return false;
     }
 
-    //play a song
     public void playSong(){
-        //play
         player.reset();
-        //get song
-        Music playSong = songs.get(songPosn);
-        //get title
+        Music playSong = music.get(index);
         songTitle=playSong.getTitle();
-        //get id
         long currSong = playSong.getId();
-        //set uri
         Uri trackUri = ContentUris.withAppendedId(
                 android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 currSong);
-        //set the data source
         try{
             player.setDataSource(getApplicationContext(), trackUri);
+            player.prepare();
         }
         catch(Exception e){
             Log.e("MUSIC SERVICE", "Error setting data source", e);
         }
-        player.prepareAsync();
+
+        mainActivity.titletxt.setText(songTitle);
+
+        mainActivity.seekBar.setMax(player.getDuration());
+        mainActivity.seekBar.setProgress(0);
+        mainActivity.totTime.setText(durationToTime(player.getDuration()));
+        mainActivity.play.setImageResource(R.drawable.pause);
+        notificationService.updateNoti();
     }
 
     //set the song
     public void setSong(int songIndex){
-        songPosn=songIndex;
+        index=songIndex;
+        playSong();
     }
 
     @Override
     public void onCompletion(MediaPlayer mp) {
         //check if playback has reached the end of a track
-        if(player.getCurrentPosition()>0){
+        //if(player.getCurrentPosition()>0){
             mp.reset();
             playNext();
-        }
+        //}
     }
 
     @Override
@@ -135,22 +204,9 @@ public class MusicService extends Service implements
     public void onPrepared(MediaPlayer mp) {
         //start playback
         mp.start();
-        //notification
-        Intent notIntent = new Intent(this, MainActivity.class);
-        notIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendInt = PendingIntent.getActivity(this, 0,
-                notIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        Notification.Builder builder = new Notification.Builder(this);
-
-        builder.setContentIntent(pendInt)
-                .setSmallIcon(R.drawable.play)
-                .setTicker(songTitle)
-                .setOngoing(true)
-                .setContentTitle("Playing")
-                .setContentText(songTitle);
-        Notification not = builder.build();
-        startForeground(NOTIFY_ID, not);
+        Intent notiService = new Intent(this, NotificationService.class);
+        startService(notiService);
     }
 
     //playback methods
@@ -180,23 +236,23 @@ public class MusicService extends Service implements
 
     //skip to previous track
     public void playPrev(){
-        songPosn--;
-        if(songPosn<0) songPosn=songs.size()-1;
+        index--;
+        if(index<0) index=music.size()-1;
         playSong();
     }
 
     //skip to next
     public void playNext(){
         if(shuffle){
-            int newSong = songPosn;
-            while(newSong==songPosn){
-                newSong=rand.nextInt(songs.size());
+            int newSong = index;
+            while(newSong==index){
+                newSong=rand.nextInt(music.size());
             }
-            songPosn=newSong;
+            index=newSong;
         }
         else{
-            songPosn++;
-            if(songPosn>=songs.size()) songPosn=0;
+            index++;
+            if(index>=music.size()) index=0;
         }
         playSong();
     }
@@ -210,6 +266,29 @@ public class MusicService extends Service implements
     public void setShuffle(){
         if(shuffle) shuffle=false;
         else shuffle=true;
+    }
+
+    public String durationToTime(long milliseconds) {
+        String finalTimerString = "";
+        String secondsString = "";
+
+        int hours = (int) (milliseconds / (1000 * 60 * 60));
+        int minutes = (int) (milliseconds % (1000 * 60 * 60)) / (1000 * 60);
+        int seconds = (int) ((milliseconds % (1000 * 60 * 60)) % (1000 * 60) / 1000);
+
+        if (hours > 0) {
+            finalTimerString = hours + ":";
+        }
+
+        if (seconds < 10) {
+            secondsString = "0" + seconds;
+        } else {
+            secondsString = "" + seconds;
+        }
+
+        finalTimerString = finalTimerString + minutes + ":" + secondsString;
+
+        return finalTimerString;
     }
 
 }

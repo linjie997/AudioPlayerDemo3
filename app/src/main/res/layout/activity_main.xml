@@ -41,40 +41,33 @@
         android:id="@+id/play"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:onClick="play"
-        app:srcCompat="@drawable/play"
         android:layout_marginBottom="7dp"
-        app:layout_constraintBottom_toTopOf="@+id/seekBar"
         android:layout_marginLeft="8dp"
-        app:layout_constraintLeft_toLeftOf="parent"
         android:layout_marginRight="8dp"
-        app:layout_constraintRight_toRightOf="parent" />
+        app:layout_constraintBottom_toTopOf="@+id/seekBar"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:srcCompat="@drawable/play" />
 
     <ImageButton
         android:id="@+id/forward"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginStart="50dp"
-        android:onClick="forward"
-        app:srcCompat="@drawable/forward"
         android:layout_marginBottom="8dp"
+        android:layout_marginLeft="50dp"
         app:layout_constraintBottom_toTopOf="@+id/seekBar"
         app:layout_constraintLeft_toRightOf="@+id/play"
-        android:layout_marginLeft="50dp" />
+        app:srcCompat="@drawable/forward" />
 
     <ImageButton
         android:id="@+id/back"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginEnd="50dp"
-        android:onClick="back"
-        app:srcCompat="@drawable/back"
         android:layout_marginBottom="7dp"
+        android:layout_marginRight="50dp"
         app:layout_constraintBottom_toTopOf="@+id/seekBar"
         app:layout_constraintRight_toLeftOf="@+id/play"
-        android:layout_marginRight="50dp" />
+        app:srcCompat="@drawable/back" />
 
     <TextView
         android:id="@+id/title"

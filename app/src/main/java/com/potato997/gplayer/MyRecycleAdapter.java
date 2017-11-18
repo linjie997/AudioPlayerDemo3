@@ -21,6 +21,7 @@ public class MyRecycleAdapter extends RecyclerView.Adapter<MyRecycleAdapter.Cust
     private List<Music> musicList;
     private Context mContext;
     private MainActivity mainActivity;
+    public static MusicService musicService;
 
     public MyRecycleAdapter(Context context, List<Music> musicList) {
         this.musicList = musicList;
@@ -37,7 +38,7 @@ public class MyRecycleAdapter extends RecyclerView.Adapter<MyRecycleAdapter.Cust
 
     @Override
     public void onBindViewHolder(CustomViewHolder customViewHolder, final int position) {
-        Music music = musicList.get(position);
+        final Music music = musicList.get(position);
 
             Picasso.with(mContext).load(music.getAlbumUri())
                     .error(R.drawable.no_art)
@@ -49,8 +50,7 @@ public class MyRecycleAdapter extends RecyclerView.Adapter<MyRecycleAdapter.Cust
         customViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                MainActivity.index = (position - 1);
-                mainActivity.forward();
+                musicService.setSong(position);
             }
         });
 
