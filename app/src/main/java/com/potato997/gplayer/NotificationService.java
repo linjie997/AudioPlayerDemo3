@@ -35,11 +35,11 @@ public class NotificationService extends IntentService {
     public void onCreate() {
         super.onCreate();
 
+        MusicService.notificationService = this;
+
         remoteView = new RemoteViews(getPackageName(), R.layout.notification);
 
         setListeners(remoteView);
-
-        MusicService.notificationService = this;
 
         nBuilder = new NotificationCompat.Builder(getApplicationContext())
                 .setContentTitle("GPlayer")
@@ -51,7 +51,6 @@ public class NotificationService extends IntentService {
         notificationManager.notify(1, nBuilder.build());
 
         updateNoti();
-
     }
 
     private void setListeners(RemoteViews v){

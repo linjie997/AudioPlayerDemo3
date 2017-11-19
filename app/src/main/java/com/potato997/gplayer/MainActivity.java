@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -25,7 +24,6 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,10 +45,9 @@ public class MainActivity extends AppCompatActivity {
     ImageButton play;
     ImageButton back;
     ImageButton forward;
-    boolean isRandom = false;
     SeekBar seekBar;
-    static MediaPlayer currentTrack;
     public static NotificationService notificationService;
+    public static boolean isRunning;
 
     final public static Uri sArtworkUri = Uri.parse("content://media/external/audio/albumart");
 
@@ -85,33 +82,17 @@ public class MainActivity extends AppCompatActivity {
         titletxt = (TextView) findViewById(R.id.title);
         seekBar = (SeekBar) findViewById(R.id.seekBar);
 
+        isRunning = true;
+
         setGesture();
 
         loadAudio();
 
-        Uri trackUri = ContentUris.withAppendedId(
-                android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                music.get(0).getId());
-
-        currentTrack = new MediaPlayer();
-
-        try {
-            currentTrack.setDataSource(getApplicationContext(), trackUri);
-            currentTrack.prepare();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-/*
-        currentTrack.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override public void onCompletion(MediaPlayer mp) { forward(); } });
-*/
         adapter = new MyRecycleAdapter(this, music);
 
         mRecyclerView.setAdapter(adapter);
 
         MusicService.mainActivity = this;
-
-        seekBar.setMax(currentTrack.getDuration());
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -199,6 +180,17 @@ public class MainActivity extends AppCompatActivity {
             playIntent = new Intent(this, MusicService.class);
             bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE);
             startService(playIntent);
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        isRunning = false;
+
+        if (musicConnection != null) {
+            unbindService(musicConnection);
         }
     }
 

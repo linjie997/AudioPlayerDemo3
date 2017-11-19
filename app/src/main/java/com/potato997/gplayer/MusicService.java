@@ -20,20 +20,13 @@ public class MusicService extends Service implements
         MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener,
         MediaPlayer.OnCompletionListener {
 
-    //media player
     public MediaPlayer player;
-    //song list
     public List<Music> music;
-    //current position
     public int index;
-    //binder
     private final IBinder musicBind = new MusicBinder();
-    //title of current song
     public String songTitle="";
-    //notification id
-    private static final int NOTIFY_ID=1;
-    //shuffle flag and random
     private boolean shuffle=false;
+    private boolean isStarted = false;
     private Random rand;
 
     public static MainActivity mainActivity;
@@ -41,50 +34,53 @@ public class MusicService extends Service implements
     private String currTime;
 
     public void onCreate(){
-        //create the service
+
         super.onCreate();
         MyRecycleAdapter.musicService = this;
+
         notificationService.musicService = this;
-        //initialize position
+
         index=0;
-        //random
+
         rand=new Random();
-        //create player
+
         player = new MediaPlayer();
-        //initialize
+
         initMusicPlayer();
     }
 
     public void initMusicPlayer(){
-        //set player properties
         player.setWakeMode(getApplicationContext(),
                 PowerManager.PARTIAL_WAKE_LOCK);
         player.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        //set listeners
         player.setOnPreparedListener(this);
         player.setOnCompletionListener(this);
         player.setOnErrorListener(this);
+        player.pause();
 
-        mainActivity.play.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                play();
-            }
-        });
+        if(MainActivity.isRunning){
 
-        mainActivity.forward.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                playNext();
-            }
-        });
+            mainActivity.play.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    play();
+                }
+            });
 
-        mainActivity.back.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                playPrev();
-            }
-        });
+            mainActivity.forward.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    playNext();
+                }
+            });
+
+            mainActivity.back.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    playPrev();
+                }
+            });
+        }
 
         final Handler handler = new Handler();
         Runnable task = new Runnable() {
@@ -92,8 +88,10 @@ public class MusicService extends Service implements
             public void run() {
                 if(player.isPlaying()){
                     currTime = durationToTime(player.getCurrentPosition());
-                    mainActivity.currentTime.setText(currTime);
-                    mainActivity.seekBar.setProgress(player.getCurrentPosition());
+                    if(MainActivity.isRunning){
+                        mainActivity.currentTime.setText(currTime);
+                        mainActivity.seekBar.setProgress(player.getCurrentPosition());
+                    }
                 }
                 handler.postDelayed(this, 1000);
             }
@@ -104,18 +102,20 @@ public class MusicService extends Service implements
     public void play(){
 
         if(player.isPlaying()){
-            pausePlayer();
-            mainActivity.play.setImageResource(R.drawable.play);
+            player.pause();
+            if(MainActivity.isRunning)
+                mainActivity.play.setImageResource(R.drawable.play);
         }
         else{
             player.start();
-            mainActivity.play.setImageResource(R.drawable.pause);
+            if(MainActivity.isRunning)
+                mainActivity.play.setImageResource(R.drawable.pause);
         }
     }
 
-    public void getMusic(List<Music> themusic){
-        music=themusic;
+    public void getMusic(List<Music> music){
 
+        this.music=music;
         Music playSong = music.get(index);
         songTitle=playSong.getTitle();
         long currSong = playSong.getId();
@@ -130,22 +130,25 @@ public class MusicService extends Service implements
         catch(Exception e){
             Log.e("MUSIC SERVICE", "Error setting data source", e);
         }
+
+        isStarted = true;
+
+        mainActivity.seekBar.setMax(player.getDuration());
+        mainActivity.seekBar.setProgress(player.getCurrentPosition());
+        mainActivity.currentTime.setText("0:00");
     }
 
-    //binder
     public class MusicBinder extends Binder {
         MusicService getService() {
             return MusicService.this;
         }
     }
 
-    //activity will bind to service
     @Override
     public IBinder onBind(Intent intent) {
         return musicBind;
     }
 
-    //release resources when unbind
     @Override
     public boolean onUnbind(Intent intent){
         player.stop();
@@ -169,16 +172,17 @@ public class MusicService extends Service implements
             Log.e("MUSIC SERVICE", "Error setting data source", e);
         }
 
-        mainActivity.titletxt.setText(songTitle);
-
-        mainActivity.seekBar.setMax(player.getDuration());
-        mainActivity.seekBar.setProgress(0);
-        mainActivity.totTime.setText(durationToTime(player.getDuration()));
-        mainActivity.play.setImageResource(R.drawable.pause);
-        notificationService.updateNoti();
+        if(MainActivity.isRunning){
+            mainActivity.seekBar.setMax(player.getDuration());
+            mainActivity.seekBar.setProgress(0);
+            mainActivity.totTime.setText(durationToTime(player.getDuration()));
+            mainActivity.play.setImageResource(R.drawable.pause);
+            mainActivity.titletxt.setText(songTitle);
+            mainActivity.totTime.setText(durationToTime(player.getDuration()));
+        }
+        player.start();
     }
 
-    //set the song
     public void setSong(int songIndex){
         index=songIndex;
         playSong();
@@ -186,11 +190,8 @@ public class MusicService extends Service implements
 
     @Override
     public void onCompletion(MediaPlayer mp) {
-        //check if playback has reached the end of a track
-        //if(player.getCurrentPosition()>0){
-            mp.reset();
-            playNext();
-        //}
+        mp.reset();
+        playNext();
     }
 
     @Override
@@ -202,36 +203,14 @@ public class MusicService extends Service implements
 
     @Override
     public void onPrepared(MediaPlayer mp) {
-        //start playback
-        mp.start();
-
         Intent notiService = new Intent(this, NotificationService.class);
         startService(notiService);
-    }
-
-    //playback methods
-    public int getPosn(){
-        return player.getCurrentPosition();
-    }
-
-    public int getDur(){
-        return player.getDuration();
-    }
-
-    public boolean isPng(){
-        return player.isPlaying();
-    }
-
-    public void pausePlayer(){
-        player.pause();
+        mainActivity.totTime.setText(durationToTime(player.getDuration()));
     }
 
     public void seek(int posn){
         player.seekTo(posn);
-    }
-
-    public void go(){
-        player.start();
+        mainActivity.currentTime.setText(durationToTime(player.getCurrentPosition()));
     }
 
     //skip to previous track
@@ -243,18 +222,21 @@ public class MusicService extends Service implements
 
     //skip to next
     public void playNext(){
-        if(shuffle){
-            int newSong = index;
-            while(newSong==index){
-                newSong=rand.nextInt(music.size());
+        if(isStarted){
+            if(shuffle){
+                int newSong = index;
+                while(newSong==index){
+                    newSong=rand.nextInt(music.size());
+                }
+                index=newSong;
             }
-            index=newSong;
+            else{
+                index++;
+                if(index>=music.size())
+                    index=0;
+            }
+            playSong();
         }
-        else{
-            index++;
-            if(index>=music.size()) index=0;
-        }
-        playSong();
     }
 
     @Override
